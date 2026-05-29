@@ -120,7 +120,7 @@ http://127.0.0.1:8000/admin
 管理面板使用 Vue 3 + Naive UI 的浏览器版实现，不需要单独运行前端构建。第一版包含：
 
 - 概览：查看服务状态、账号池数量、模型数量、日志等级和部署环境。
-- Token 管理：以列表形式显示 Freebuff Token，默认只展示脱敏值；支持添加、行内修改、行内删除和单条测试。
+- Token 管理：以列表形式显示 Freebuff Token，默认只展示脱敏值；点击添加会打开 Token 获取页面，复制 token 后回到面板粘贴保存；支持行内修改、行内删除和单条测试。
 - API Key：单独管理 `FREEBUFF_API_KEY`，用于 `/v1/*` 接口的 `Authorization: Bearer <key>`。
 - Env：查看本地项目根目录 `.env` 内容，并复制当前配置文本。
 - 日志：查看当前进程内存中的最近运行日志，可按等级筛选和复制。
@@ -497,7 +497,7 @@ curl http://127.0.0.1:8000/v1/models `
 
 1. 打开 `http://127.0.0.1:8000/admin`。
 2. 使用 `FREEBUFF_ADMIN_KEY` 登录；未设置时可临时使用 `FREEBUFF_API_KEY`。
-3. 在 Token 页面确认列表默认脱敏，点击“修改”时才显示完整 token。
+3. 在 Token 页面确认列表默认脱敏；点击“添加 Token”会打开 `https://freebuff.071129.xyz/` 并提示复制 token 后粘贴保存；点击“修改”时才显示完整 token。
 4. 在 API Key 页面确认可单独更新 `FREEBUFF_API_KEY`。
 5. 在 Env 页面确认本地显示 `.env`，Vercel 部署时提示去 Environment Variables 修改并重新部署。
 6. 在日志页面确认能看到当前进程日志。

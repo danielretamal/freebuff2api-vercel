@@ -476,6 +476,10 @@
             </section>
 
             <n-modal v-model:show="tokenModal.show" preset="card" :title="tokenModal.mode === 'add' ? '添加 Freebuff Token' : '修改 Freebuff Token'" style="width: min(640px, 92vw)">
+              <n-alert v-if="tokenModal.mode === 'add'" type="info" style="margin-bottom: 16px;">
+                已打开 Token 获取页面。完成认证后复制 token，回到这里粘贴并保存。也可以手动打开：
+                <a :href="tokenHelpUrl" target="_blank" rel="noopener">{{ tokenHelpUrl }}</a>
+              </n-alert>
               <n-form>
                 <n-form-item label="完整 Token">
                   <n-input v-model:value="tokenModal.token" type="textarea" :autosize="{ minRows: 4, maxRows: 8 }" placeholder="粘贴完整 Freebuff Token" />
@@ -529,6 +533,7 @@
         const testResult = ref('');
         const modelOptions = ref([]);
         const testForm = reactive({ model: '', prompt: '用一句话回复：服务测试成功。' });
+        const tokenHelpUrl = 'https://freebuff.071129.xyz/';
         const tokenModal = reactive({ show: false, mode: 'add', index: null, token: '' });
         const apiKeyForm = reactive({ api_key: '' });
         const security = reactive({ admin_key: '' });
@@ -640,6 +645,10 @@
           tokenModal.mode = mode;
           tokenModal.index = index;
           tokenModal.token = '';
+          if (mode === 'add') {
+            window.open(tokenHelpUrl, '_blank', 'noopener');
+            message.info('已打开 Token 获取页面，复制 token 后回到这里粘贴保存');
+          }
           if (mode === 'edit' && index) loadTokenForEdit(index);
         }
 
@@ -808,7 +817,7 @@
 
         return {
           authed, loginKey, tab, nav, overview, config, logs, logLevel, logLimit,
-          logLevels, lastEnv, envInfo, modelOptions, testForm, testResult, tokenModal,
+          logLevels, lastEnv, envInfo, modelOptions, testForm, testResult, tokenHelpUrl, tokenModal,
           apiKeyForm, security, loading, activeTitle, activeSubtitle,
           login, logout, refreshAll, loadLogs, loadModels, loadEnv, openTokenModal,
           saveTokenModal, deleteToken, verifyTokenValue, verifySavedToken,
