@@ -311,7 +311,19 @@ FREEBUFF_PROXY_URL=socks5://127.0.0.1:7890
 
 ### 部署地区
 
-这个项目当前没有在 `vercel.json` 里强制写死函数地区，而是使用 Vercel 项目的默认部署地区。这样可以避免 Vercel 对 Python Serverless Function 的路径匹配配置报错。
+项目已经在 `vercel.json` 中设置：
+
+```json
+{
+  "regions": ["iad1"]
+}
+```
+
+`iad1` 是 Vercel 的 Washington, D.C., USA (East) 区域。Freebuff 上游对免费模型有 IP/区域限制，建议保持 US 区域；如果部署到非 US 区域，可能会遇到类似下面的上游错误：
+
+```text
+Codebuff 409 session_model_mismatch: Limited free access is only available with DeepSeek V4 Flash. 当前 IP/区域受限；请换用 US 服务器或 US 出口 IP 后重试。
+```
 
 你之前部署日志里显示：
 
@@ -319,9 +331,9 @@ FREEBUFF_PROXY_URL=socks5://127.0.0.1:7890
 Running build in Washington, D.C., USA (East) - iad1
 ```
 
-这表示当前构建运行在 `iad1`，也就是美国东部 Washington, D.C. 区域。Vercel 的 Serverless Function 默认区域也通常会跟随项目设置或账号默认设置。
+这表示当前构建运行在 `iad1`。重新部署后，也建议在 Vercel 部署日志或项目设置里确认函数区域仍为 `iad1`。
 
-查看或调整地区的方法：
+如果你需要在 Vercel 后台确认或调整地区：
 
 1. 打开 Vercel 项目页面。
 2. 进入 `Settings`。
@@ -329,7 +341,7 @@ Running build in Washington, D.C., USA (East) - iad1
 4. 选择需要的区域，例如 `Washington, D.C., USA (East) - iad1`。
 5. 保存后重新部署。
 
-一般建议保持 `iad1`。如果你的主要调用方在亚洲，可以在 Vercel 后台查看账号是否支持更近的区域；但上游 Codebuff / Freebuff 的网络连通性比访问者到 Vercel 的距离更关键。
+一般建议保持 `iad1`。这个项目访问者到 Vercel 的距离不是主要瓶颈，上游 Codebuff / Freebuff 对出口 IP/区域的限制更关键。
 
 ### 绑定自定义域名
 
