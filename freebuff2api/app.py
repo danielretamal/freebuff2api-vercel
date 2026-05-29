@@ -9,6 +9,7 @@ import uuid
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from .admin import router as admin_router
 from .codebuff import (
     CodebuffAccountLease,
     CodebuffAccountPool,
@@ -50,6 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="freebuff2api", version="0.1.0", lifespan=lifespan)
+app.include_router(admin_router)
 
 
 def _settings(request: Request) -> Settings:

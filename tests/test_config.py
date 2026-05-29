@@ -1,7 +1,9 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from freebuff2api.config import Settings, load_settings
+from freebuff2api.config import Settings, load_settings, write_env_values
 
 
 class ConfigTests(unittest.TestCase):
@@ -72,6 +74,38 @@ class ConfigTests(unittest.TestCase):
             settings.codebuff_tokens,
             ("token-a", "token-b", "token-c"),
         )
+
+    def test_load_settings_reads_admin_key_and_log_limit(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "FREEBUFF_ADMIN_KEY": "admin-secret",
+                "FREEBUFF_ADMIN_LOG_LINES": "250",
+            },
+            clear=True,
+        ):
+            settings = load_settings()
+
+        self.assertEqual(settings.admin_key, "admin-secret")
+        self.assertEqual(settings.admin_log_lines, 250)
+
+    def test_write_env_values_updates_known_keys_and_preserves_comments(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            env_path = Path(temp_dir) / ".env"
+            env_path.write_text(
+                "# local config\nFREEBUFF_TOKEN=old\nFREEBUFF_TIMEOUT=60\n",
+                encoding="utf-8",
+            )
+
+            write_env_values(
+                {"FREEBUFF_TOKEN": "new-a,new-b", "FREEBUFF_ADMIN_KEY": "admin"},
+                env_path,
+            )
+
+            self.assertEqual(
+                env_path.read_text(encoding="utf-8"),
+                "# local config\nFREEBUFF_TOKEN=new-a,new-b\nFREEBUFF_TIMEOUT=60\nFREEBUFF_ADMIN_KEY=admin\n",
+            )
 
 
 if __name__ == "__main__":

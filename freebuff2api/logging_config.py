@@ -3,6 +3,10 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import threading
+from collections import deque
+from dataclasses import dataclass
+from itertools import count
 from typing import Any
 
 from .config import Settings
@@ -20,6 +24,62 @@ COLORS = {
 }
 
 
+@dataclass(frozen=True)
+class BufferedLogRecord:
+    id: int
+    time: str
+    level: str
+    logger: str
+    message: str
+
+
+class InMemoryLogHandler(logging.Handler):
+    def __init__(self, capacity: int) -> None:
+        super().__init__()
+        self.capacity = max(capacity, 100)
+        self._records: deque[BufferedLogRecord] = deque(maxlen=self.capacity)
+        self._counter = count(1)
+        self._lock = threading.Lock()
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            item = BufferedLogRecord(
+                id=next(self._counter),
+                time=self.formatTime(record),
+                level=record.levelname,
+                logger=record.name,
+                message=record.getMessage(),
+            )
+            with self._lock:
+                self._records.append(item)
+        except Exception:
+            self.handleError(record)
+
+    def formatTime(self, record: logging.LogRecord) -> str:
+        formatter = logging.Formatter(datefmt=DATE_FORMAT)
+        return formatter.formatTime(record, DATE_FORMAT)
+
+    def records(
+        self,
+        *,
+        since_id: int = 0,
+        limit: int = 200,
+        level: str | None = None,
+    ) -> list[dict[str, Any]]:
+        limit = min(max(limit, 1), self.capacity)
+        selected_level = level.upper() if level else None
+        with self._lock:
+            items = list(self._records)
+        if since_id > 0:
+            items = [item for item in items if item.id > since_id]
+        if selected_level:
+            items = [item for item in items if item.level == selected_level]
+        return [item.__dict__ for item in items[-limit:]]
+
+
+_memory_handler: InMemoryLogHandler | None = None
+
+
 class ColorFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         message = super().format(record)
@@ -30,13 +90,17 @@ class ColorFormatter(logging.Formatter):
 
 
 def configure_logging(settings: Settings) -> None:
+    global _memory_handler
     handler = logging.StreamHandler(sys.stdout)
     formatter_cls = ColorFormatter if settings.log_color else logging.Formatter
     handler.setFormatter(formatter_cls(LOG_FORMAT, datefmt=DATE_FORMAT))
 
+    _memory_handler = InMemoryLogHandler(settings.admin_log_lines)
+
     root = logging.getLogger()
     root.handlers.clear()
     root.addHandler(handler)
+    root.addHandler(_memory_handler)
     root.setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
 
     logging.getLogger("httpx").setLevel(logging.DEBUG if settings.debug else logging.WARNING)
@@ -47,6 +111,17 @@ def configure_logging(settings: Settings) -> None:
         settings.log_body_chars,
         settings.log_color,
     )
+
+
+def get_buffered_logs(
+    *,
+    since_id: int = 0,
+    limit: int = 200,
+    level: str | None = None,
+) -> list[dict[str, Any]]:
+    if _memory_handler is None:
+        return []
+    return _memory_handler.records(since_id=since_id, limit=limit, level=level)
 
 
 def render_debug(value: Any, limit: int) -> str:
