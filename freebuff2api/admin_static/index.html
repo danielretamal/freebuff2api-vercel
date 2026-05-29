@@ -443,6 +443,11 @@
               <div class="log-toolbar">
                 <n-select v-model:value="logLevel" :options="logLevels" style="width: 160px" />
                 <n-input-number v-model:value="logLimit" :min="50" :max="1000" :step="50" style="width: 140px" />
+                <n-switch v-model:value="logAutoRefresh" @update:value="syncLogAutoRefresh">
+                  <template #checked>自动刷新</template>
+                  <template #unchecked>手动刷新</template>
+                </n-switch>
+                <span class="muted">{{ logAutoRefresh ? `每 ${logRefreshSeconds} 秒刷新` : '自动刷新已关闭' }}</span>
                 <n-button type="primary" secondary :loading="loading.logs" @click="loadLogs(false)">刷新日志</n-button>
                 <n-button secondary @click="copyLogs">复制当前日志</n-button>
               </div>
@@ -513,7 +518,7 @@
   </div>
 
   <script>
-    const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
+    const { createApp, ref, reactive, computed, onMounted, onUnmounted, watch } = Vue;
 
     function normalizeError(error) {
       return error && error.message ? error.message : String(error || '请求失败');
@@ -547,6 +552,9 @@
         const logs = ref([]);
         const logLevel = ref('');
         const logLimit = ref(200);
+        const logAutoRefresh = ref(true);
+        const logRefreshSeconds = ref(5);
+        const logTimer = ref(null);
         const lastEnv = ref('');
         const testResult = ref('');
         const modelOptions = ref([]);
@@ -584,7 +592,9 @@
           if (!nav.some(item => item.key === value)) return;
           const nextHash = `#/${value}`;
           if (location.hash !== nextHash) history.replaceState(null, '', nextHash);
+          syncLogAutoRefresh();
         });
+        watch(authed, syncLogAutoRefresh);
         const logLevels = [
           { label: '全部等级', value: '' },
           { label: 'DEBUG', value: 'DEBUG' },
@@ -618,6 +628,7 @@
         async function logout() {
           await api('/admin/api/logout', { method: 'POST' }).catch(() => null);
           authed.value = false;
+          stopLogAutoRefresh();
         }
 
         async function loadOverview() {
@@ -629,8 +640,9 @@
           assign(config, configRes.data);
         }
 
-        async function loadLogs(showToast = false) {
-          loading.logs = true;
+        async function loadLogs(showToast = false, silent = false) {
+          if (loading.logs) return;
+          if (!silent) loading.logs = true;
           try {
             const qs = new URLSearchParams({ limit: String(logLimit.value) });
             if (logLevel.value) qs.set('level', logLevel.value);
@@ -638,10 +650,26 @@
             logs.value = res.data.items || [];
             if (showToast) message.success('日志已刷新');
           } catch (error) {
-            message.error(normalizeError(error));
+            if (!silent) message.error(normalizeError(error));
           } finally {
-            loading.logs = false;
+            if (!silent) loading.logs = false;
           }
+        }
+
+        function stopLogAutoRefresh() {
+          if (logTimer.value) {
+            clearInterval(logTimer.value);
+            logTimer.value = null;
+          }
+        }
+
+        function syncLogAutoRefresh() {
+          stopLogAutoRefresh();
+          if (!authed.value || tab.value !== 'logs' || !logAutoRefresh.value) return;
+          loadLogs(false, true);
+          logTimer.value = setInterval(() => {
+            loadLogs(false, true);
+          }, logRefreshSeconds.value * 1000);
         }
 
         async function refreshAll() {
@@ -838,12 +866,13 @@
         }
 
         onMounted(checkSession);
+        onUnmounted(stopLogAutoRefresh);
 
         return {
           checkingSession, authed, loginKey, tab, nav, overview, config, logs, logLevel, logLimit,
-          logLevels, lastEnv, envInfo, modelOptions, testForm, testResult, tokenHelpUrl, tokenModal,
+          logLevels, logAutoRefresh, logRefreshSeconds, lastEnv, envInfo, modelOptions, testForm, testResult, tokenHelpUrl, tokenModal,
           apiKeyForm, security, loading, activeTitle, activeSubtitle,
-          login, logout, refreshAll, loadLogs, loadModels, loadEnv, openTokenModal,
+          login, logout, refreshAll, loadLogs, loadModels, loadEnv, syncLogAutoRefresh, openTokenModal,
           saveTokenModal, deleteToken, verifyTokenValue, verifySavedToken,
           runChatTest, saveSecurity, saveApiKey, copyLogs, copyEnvContent
         };

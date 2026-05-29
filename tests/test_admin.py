@@ -13,6 +13,8 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("freebuff2api 管理面板", response.text)
         self.assertIn("naive-ui", response.text)
+        self.assertIn("自动刷新", response.text)
+        self.assertIn("syncLogAutoRefresh", response.text)
 
     def test_root_redirects_to_admin(self) -> None:
         response = TestClient(app).get("/", follow_redirects=False)
