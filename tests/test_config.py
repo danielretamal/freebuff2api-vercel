@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from freebuff2api.config import Settings, load_settings, write_env_values
+from freebuff2api.config import DEFAULT_ADMIN_KEY, Settings, load_settings, write_env_values
 
 
 class ConfigTests(unittest.TestCase):
@@ -88,6 +88,12 @@ class ConfigTests(unittest.TestCase):
 
         self.assertEqual(settings.admin_key, "admin-secret")
         self.assertEqual(settings.admin_log_lines, 250)
+
+    def test_load_settings_defaults_admin_key(self) -> None:
+        with patch.dict("os.environ", {}, clear=True):
+            settings = load_settings()
+
+        self.assertEqual(settings.admin_key, DEFAULT_ADMIN_KEY)
 
     def test_write_env_values_updates_known_keys_and_preserves_comments(self) -> None:
         with TemporaryDirectory() as temp_dir:

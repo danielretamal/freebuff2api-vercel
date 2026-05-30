@@ -53,6 +53,16 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(overview.status_code, 200)
         self.assertEqual(overview.json()["data"]["status"], "ok")
 
+    def test_admin_login_uses_default_admin_key(self) -> None:
+        with patch.dict("os.environ", {}, clear=True):
+            with TestClient(app) as client:
+                response = client.post("/admin/api/login", json={"key": "sk-admin"})
+                config = client.get("/admin/api/config")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(config.json()["data"]["using_default_admin_key"])
+        self.assertFalse(config.json()["data"]["setup_complete"])
+
     def test_wrong_admin_key_is_rejected(self) -> None:
         with patch.dict("os.environ", {"FREEBUFF_ADMIN_KEY": "admin-secret"}, clear=True):
             with TestClient(app) as client:
@@ -123,6 +133,30 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["data"]["api_key_configured"])
         write_env.assert_called_once_with({"FREEBUFF_API_KEY": "new-api-key"})
+
+    def test_network_endpoint_returns_region_and_connectivity(self) -> None:
+        with patch.dict("os.environ", {"FREEBUFF_ADMIN_KEY": "admin-secret"}, clear=True):
+            with patch(
+                "freebuff2api.admin._probe_region",
+                new_callable=AsyncMock,
+                return_value={"ok": True, "ip": "203.0.113.1", "country": "Testland", "source": "ipapi.co"},
+            ):
+                with patch(
+                    "freebuff2api.admin._probe_url",
+                    new_callable=AsyncMock,
+                    side_effect=[
+                        {"name": "codebuff", "ok": True, "status": 200},
+                        {"name": "freebuff", "ok": True, "status": 200},
+                    ],
+                ):
+                    with TestClient(app) as client:
+                        client.post("/admin/api/login", json={"key": "admin-secret"})
+                        response = client.get("/admin/api/network")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()["data"]
+        self.assertEqual(data["region"]["country"], "Testland")
+        self.assertEqual(len(data["connectivity"]), 2)
 
     def test_admin_models_returns_v1_models_shape(self) -> None:
         with patch.dict("os.environ", {"FREEBUFF_ADMIN_KEY": "admin-secret"}, clear=True):

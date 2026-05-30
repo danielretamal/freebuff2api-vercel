@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+DEFAULT_ADMIN_KEY = "sk-admin"
+
+
 @dataclass(frozen=True)
 class Settings:
     codebuff_token: str | None
@@ -98,7 +101,7 @@ def load_settings() -> Settings:
     return Settings(
         codebuff_token=os.getenv("FREEBUFF_TOKEN") or os.getenv("CODEBUFF_TOKEN"),
         local_api_key=os.getenv("FREEBUFF_API_KEY") or os.getenv("OPENAI_API_KEY"),
-        admin_key=os.getenv("FREEBUFF_ADMIN_KEY"),
+        admin_key=os.getenv("FREEBUFF_ADMIN_KEY") or DEFAULT_ADMIN_KEY,
         codebuff_base_url=_api_base_url(),
         zeroclick_base_url=os.getenv("ZEROCLICK_BASE_URL", "https://zeroclick.dev"),
         session_id=os.getenv("FREEBUFF_SESSION_ID", str(uuid.uuid4())),

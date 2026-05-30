@@ -291,11 +291,11 @@
               <n-card title="管理员登录" :bordered="false">
                 <n-form @submit.prevent="login">
                   <n-form-item label="Admin Key">
-                    <n-input v-model:value="loginKey" type="password" show-password-on="click" placeholder="输入 FREEBUFF_ADMIN_KEY" @keydown.enter="login" />
+                    <n-input v-model:value="loginKey" type="password" show-password-on="click" placeholder="默认 sk-admin" @keydown.enter="login" />
                   </n-form-item>
                   <n-button type="primary" block :loading="loading.login" @click="login">登录</n-button>
                 </n-form>
-                <p class="muted" style="margin: 14px 0 0; font-size: 12px; line-height: 1.7;">如果尚未配置 FREEBUFF_ADMIN_KEY，会临时使用 FREEBUFF_API_KEY 登录。</p>
+                <p class="muted" style="margin: 14px 0 0; font-size: 12px; line-height: 1.7;">默认管理员 Key 是 sk-admin，进入后请在设置页改成自己的密钥。</p>
               </n-card>
             </div>
           </section>
@@ -335,6 +335,11 @@
             </header>
 
             <section v-if="tab === 'overview'">
+              <n-alert v-if="config.using_default_admin_key || !config.api_key_configured || !config.token_count" type="warning" title="初始化未完成" style="margin-bottom: 16px;">
+                <div v-if="config.using_default_admin_key">当前仍在使用默认 Admin Key：sk-admin，请到设置页修改。</div>
+                <div v-if="!config.api_key_configured">FREEBUFF_API_KEY 未配置，/v1/* API 会暂时返回配置错误。</div>
+                <div v-if="!config.token_count">FREEBUFF_TOKEN 未配置，请到 Token 页添加后热更新生效。</div>
+              </n-alert>
               <div class="metric-grid">
                 <div class="metric"><div class="metric-label">账号池</div><div class="metric-value">{{ overview.account_count ?? '-' }}</div><div class="metric-note">Freebuff Token 数量</div></div>
                 <div class="metric"><div class="metric-label">模型</div><div class="metric-value">{{ overview.model_count ?? '-' }}</div><div class="metric-note">OpenAI 兼容模型</div></div>
@@ -345,7 +350,7 @@
                 <n-card title="当前配置" :bordered="true">
                   <n-descriptions label-placement="left" :column="1" size="small" bordered>
                     <n-descriptions-item label="API Key">{{ config.api_key_configured ? config.api_key_masked : '未设置' }}</n-descriptions-item>
-                    <n-descriptions-item label="Admin Key">{{ config.admin_key_configured ? config.admin_key_masked : '未设置' }}</n-descriptions-item>
+                    <n-descriptions-item label="Admin Key">{{ config.admin_key_configured ? config.admin_key_masked : '未设置' }}{{ config.using_default_admin_key ? '（默认）' : '' }}</n-descriptions-item>
                     <n-descriptions-item label="代理">{{ config.proxy_enabled ? config.proxy_url : '关闭' }}</n-descriptions-item>
                     <n-descriptions-item label="Base URL">{{ config.base_url }}</n-descriptions-item>
                   </n-descriptions>
@@ -436,6 +441,37 @@
                 <p class="muted">进入 Vercel 项目页面，打开 Settings -> Environment Variables。</p>
                 <p class="muted">修改 `FREEBUFF_TOKEN`、`FREEBUFF_API_KEY`、`FREEBUFF_ADMIN_KEY` 等变量后，需要重新部署。</p>
                 <p class="muted">本地 `.env` 不会上传到 GitHub，也不会被 Vercel 自动读取。</p>
+              </n-card>
+            </section>
+
+            <section v-if="tab === 'network'" class="panel-grid">
+              <n-card title="服务器网络环境" :bordered="true">
+                <n-space style="margin-bottom: 14px;">
+                  <n-button type="primary" secondary :loading="loading.network" @click="loadNetwork(true)">重新检测</n-button>
+                  <n-tag :type="networkInfo.region && networkInfo.region.ok ? 'success' : 'warning'">{{ networkInfo.region && networkInfo.region.ok ? '定位成功' : '定位失败' }}</n-tag>
+                </n-space>
+                <n-descriptions label-placement="left" :column="1" size="small" bordered>
+                  <n-descriptions-item label="服务器公网 IP">{{ networkInfo.region && networkInfo.region.ip || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="国家/地区">{{ networkInfo.region && networkInfo.region.country || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="省市">{{ [networkInfo.region && networkInfo.region.region, networkInfo.region && networkInfo.region.city].filter(Boolean).join(' / ') || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="时区">{{ networkInfo.region && networkInfo.region.timezone || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="运营商">{{ networkInfo.region && networkInfo.region.org || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="来源">{{ networkInfo.region && networkInfo.region.source || '-' }} {{ networkInfo.region && networkInfo.region.latency_ms ? `(${networkInfo.region.latency_ms}ms)` : '' }}</n-descriptions-item>
+                </n-descriptions>
+              </n-card>
+              <n-card title="连通性" :bordered="true">
+                <div v-if="networkInfo.connectivity && networkInfo.connectivity.length" class="token-list">
+                  <div v-for="item in networkInfo.connectivity" :key="item.name" class="token-row" style="grid-template-columns: 90px 1fr 90px 1fr;">
+                    <n-tag size="small" :type="item.ok ? 'success' : 'error'">{{ item.name }}</n-tag>
+                    <span>{{ item.ok ? '可访问' : '失败' }}</span>
+                    <span class="muted">{{ item.status || '-' }}</span>
+                    <span class="muted">{{ item.latency_ms ? `${item.latency_ms}ms` : (item.error || '-') }}</span>
+                  </div>
+                </div>
+                <div v-else class="empty-box">尚未检测网络连通性</div>
+                <n-alert style="margin-top: 16px;" type="default">
+                  代理：{{ networkInfo.proxy_enabled ? networkInfo.proxy_url || '已开启' : '未开启' }}
+                </n-alert>
               </n-card>
             </section>
 
@@ -549,6 +585,7 @@
         const overview = reactive({});
         const config = reactive({ tokens: [] });
         const envInfo = reactive({});
+        const networkInfo = reactive({ region: {}, connectivity: [] });
         const logs = ref([]);
         const logLevel = ref('');
         const logLimit = ref(200);
@@ -575,6 +612,7 @@
           test: false,
           apiKey: false,
           env: false,
+          network: false,
           security: false
         });
 
@@ -583,6 +621,7 @@
           { key: 'tokens', label: 'Token', subtitle: '新增、验证并立即应用 Freebuff Token' },
           { key: 'apiKey', label: 'API Key', subtitle: '单独管理外部调用接口使用的访问密钥' },
           { key: 'env', label: 'Env', subtitle: '查看本地 .env 内容和部署环境提示' },
+          { key: 'network', label: '网络', subtitle: '检测当前服务器公网地区、代理和上游连通性' },
           { key: 'logs', label: '日志', subtitle: '查看当前实例内存中的运行日志' },
           { key: 'test', label: '测试', subtitle: '快速发起一次模型调用测试' },
           { key: 'settings', label: '设置', subtitle: '修改后台管理员 Key' }
@@ -679,6 +718,7 @@
             await loadLogs(false);
             await loadModels(false);
             await loadEnv(false);
+            await loadNetwork(false);
           } catch (error) {
             if (String(error.message || '').includes('401')) authed.value = false;
           } finally {
@@ -813,6 +853,19 @@
           }
         }
 
+        async function loadNetwork(showToast = false) {
+          loading.network = true;
+          try {
+            const res = await api('/admin/api/network');
+            assign(networkInfo, res.data);
+            if (showToast) message.success('网络环境已刷新');
+          } catch (error) {
+            if (showToast) message.error(normalizeError(error));
+          } finally {
+            loading.network = false;
+          }
+        }
+
         async function runChatTest() {
           loading.test = true;
           testResult.value = '';
@@ -870,9 +923,9 @@
 
         return {
           checkingSession, authed, loginKey, tab, nav, overview, config, logs, logLevel, logLimit,
-          logLevels, logAutoRefresh, logRefreshSeconds, lastEnv, envInfo, modelOptions, testForm, testResult, tokenHelpUrl, tokenModal,
+          logLevels, logAutoRefresh, logRefreshSeconds, lastEnv, envInfo, networkInfo, modelOptions, testForm, testResult, tokenHelpUrl, tokenModal,
           apiKeyForm, security, loading, activeTitle, activeSubtitle,
-          login, logout, refreshAll, loadLogs, loadModels, loadEnv, syncLogAutoRefresh, openTokenModal,
+          login, logout, refreshAll, loadLogs, loadModels, loadEnv, loadNetwork, syncLogAutoRefresh, openTokenModal,
           saveTokenModal, deleteToken, verifyTokenValue, verifySavedToken,
           runChatTest, saveSecurity, saveApiKey, copyLogs, copyEnvContent
         };

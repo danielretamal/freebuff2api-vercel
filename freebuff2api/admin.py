@@ -8,11 +8,12 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from .codebuff import CodebuffAccountPool, CodebuffClient, CodebuffError
-from .config import Settings, project_env_path, write_env_values
+from .config import DEFAULT_ADMIN_KEY, Settings, project_env_path, write_env_values
 from .logging_config import get_buffered_logs
 from .models import DEFAULT_MODEL, models_response
 
@@ -94,6 +95,7 @@ def _token_rows(settings: Settings) -> list[dict[str, Any]]:
 
 
 def _config_payload(settings: Settings) -> dict[str, Any]:
+    using_default_admin_key = settings.admin_key == DEFAULT_ADMIN_KEY
     return {
         "environment": "vercel" if _is_vercel() else "local",
         "token_count": len(settings.codebuff_tokens),
@@ -102,6 +104,8 @@ def _config_payload(settings: Settings) -> dict[str, Any]:
         "api_key_masked": _mask(settings.local_api_key),
         "admin_key_configured": bool(settings.admin_key),
         "admin_key_masked": _mask(settings.admin_key),
+        "using_default_admin_key": using_default_admin_key,
+        "setup_complete": bool(settings.local_api_key and settings.codebuff_tokens and not using_default_admin_key),
         "debug": settings.debug,
         "log_level": settings.log_level,
         "proxy_enabled": settings.proxy_enabled,
@@ -185,6 +189,84 @@ async def login(request: Request) -> JSONResponse:
     return response
 
 
+def _region_from_payload(source: str, payload: dict[str, Any]) -> dict[str, Any]:
+    if source == "ipapi.co":
+        return {
+            "ip": payload.get("ip"),
+            "country": payload.get("country_name") or payload.get("country"),
+            "region": payload.get("region"),
+            "city": payload.get("city"),
+            "timezone": payload.get("timezone"),
+            "org": payload.get("org"),
+        }
+    if source == "ipinfo.io":
+        return {
+            "ip": payload.get("ip"),
+            "country": payload.get("country"),
+            "region": payload.get("region"),
+            "city": payload.get("city"),
+            "timezone": payload.get("timezone"),
+            "org": payload.get("org"),
+        }
+    return {
+        "ip": payload.get("query"),
+        "country": payload.get("country"),
+        "region": payload.get("regionName") or payload.get("region"),
+        "city": payload.get("city"),
+        "timezone": payload.get("timezone"),
+        "org": payload.get("isp") or payload.get("org"),
+    }
+
+
+async def _probe_region(settings: Settings) -> dict[str, Any]:
+    probes = [
+        ("ipapi.co", "https://ipapi.co/json/"),
+        ("ipinfo.io", "https://ipinfo.io/json"),
+        ("ip-api.com", "http://ip-api.com/json/?fields=status,message,query,country,regionName,city,timezone,isp,org"),
+    ]
+    errors: list[dict[str, Any]] = []
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(4.0),
+        follow_redirects=True,
+        proxy=settings.upstream_proxy_url,
+        trust_env=False,
+    ) as client:
+        for source, url in probes:
+            started = time.perf_counter()
+            try:
+                response = await client.get(url, headers={"Accept": "application/json"})
+                latency_ms = round((time.perf_counter() - started) * 1000)
+                response.raise_for_status()
+                payload = response.json()
+                if payload.get("status") == "fail":
+                    raise ValueError(payload.get("message") or "region probe failed")
+                return {
+                    "ok": True,
+                    "source": source,
+                    "latency_ms": latency_ms,
+                    **_region_from_payload(source, payload),
+                }
+            except Exception as error:
+                errors.append({"source": source, "error": str(error)})
+    return {"ok": False, "source": "unknown", "errors": errors}
+
+
+async def _probe_url(client: httpx.AsyncClient, name: str, url: str) -> dict[str, Any]:
+    started = time.perf_counter()
+    try:
+        response = await client.get(url, headers={"Accept": "*/*"})
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        return {
+            "name": name,
+            "ok": response.status_code < 500,
+            "status": response.status_code,
+            "latency_ms": latency_ms,
+        }
+    except Exception as error:
+        return {"name": name, "ok": False, "error": str(error)}
+    return response
+
+
 @router.post("/admin/api/logout")
 async def logout() -> JSONResponse:
     response = JSONResponse(_api_ok())
@@ -200,6 +282,7 @@ async def session_status(request: Request) -> dict[str, Any]:
             "authenticated": _is_admin_authenticated(request),
             "admin_key_configured": bool(settings.admin_key),
             "api_key_configured": bool(settings.local_api_key),
+            "using_default_admin_key": settings.admin_key == DEFAULT_ADMIN_KEY,
         }
     )
 
@@ -270,6 +353,31 @@ async def logs(
         {
             "items": get_buffered_logs(since_id=since_id, limit=limit, level=level),
             "limit": limit,
+        }
+    )
+
+
+@router.get("/admin/api/network")
+async def network(request: Request) -> dict[str, Any]:
+    _check_admin_auth(request)
+    settings = _settings(request)
+    region = await _probe_region(settings)
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(4.0),
+        follow_redirects=True,
+        proxy=settings.upstream_proxy_url,
+        trust_env=False,
+    ) as client:
+        connectivity = [
+            await _probe_url(client, "codebuff", f"{settings.codebuff_api_url}/api/healthz"),
+            await _probe_url(client, "freebuff", "https://freebuff.com"),
+        ]
+    return _api_ok(
+        {
+            "region": region,
+            "connectivity": connectivity,
+            "proxy_enabled": settings.proxy_enabled,
+            "proxy_url": _mask(settings.proxy_url, keep=10),
         }
     )
 

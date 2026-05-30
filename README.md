@@ -57,8 +57,8 @@ FREEBUFF_TOKEN=token-a,token-b,token-c
 
 ```dotenv
 FREEBUFF_TOKEN=你的 Freebuff Bearer token
-FREEBUFF_API_KEY=你的本地 API key
-FREEBUFF_ADMIN_KEY=你的管理后台登录 key
+FREEBUFF_API_KEY=
+FREEBUFF_ADMIN_KEY=sk-admin
 FREEBUFF_API_BASE_URL=https://www.codebuff.com
 FREEBUFF_AD_PROVIDERS=gravity,zeroclick
 FREEBUFF_TIMEOUT=60
@@ -77,15 +77,17 @@ FREEBUFF_OS=windows
 FREEBUFF_BROWSER_UA=
 ```
 
+`FREEBUFF_ADMIN_KEY` 默认是 `sk-admin`。启动后可以先用这个默认 key 进入管理面板，再在设置页修改成自己的管理员密钥。公开部署时请务必修改默认值。
+
+`FREEBUFF_TOKEN` 和 `FREEBUFF_API_KEY` 可以先留空，进入管理面板后按页面提示填写。保存后本地或常驻服务器会写回 `.env`，并在当前进程中热更新生效；Vercel 环境会返回应粘贴到 Environment Variables 的文本。
+
 `FREEBUFF_API_KEY` 是你自己给这个 API 服务设置的访问密钥。设置后，请求时需要带上：
 
 ```http
 Authorization: Bearer 你的本地 API key
 ```
 
-如果 `FREEBUFF_API_KEY` 留空，接口将不校验本地访问密钥。公开部署时不建议留空。
-
-`FREEBUFF_ADMIN_KEY` 是管理后台的登录密钥。建议和 `FREEBUFF_API_KEY` 使用不同的值；如果暂时没有设置 `FREEBUFF_ADMIN_KEY`，后台会临时允许用 `FREEBUFF_API_KEY` 登录，登录后可以在设置页重新配置管理密钥。
+如果 `FREEBUFF_API_KEY` 留空，`/v1/*` API 会返回配置错误，避免公开部署时无鉴权暴露；管理面板仍可访问，用来完成初始化。
 
 ### 3. 本地运行
 
@@ -123,6 +125,7 @@ http://127.0.0.1:8000/admin
 - Token 管理：以列表形式显示 Freebuff Token，默认只展示脱敏值；点击添加会打开 Token 获取页面，复制 token 后回到面板粘贴保存；支持行内修改、行内删除和单条测试。
 - API Key：单独管理 `FREEBUFF_API_KEY`，用于 `/v1/*` 接口的 `Authorization: Bearer <key>`。
 - Env：查看本地项目根目录 `.env` 内容，并复制当前配置文本。
+- 网络：检测当前服务器公网 IP、国家/地区、城市、时区、运营商、代理状态以及 Codebuff/Freebuff 连通性。
 - 日志：查看当前进程内存中的最近运行日志，进入日志页后默认自动刷新，也可按等级筛选、手动刷新和复制。
 - 模型测试：从 `/v1/models` 同结构的模型列表中选择模型，再用当前配置发起一次简单的非流式调用测试。
 - 设置：修改 `FREEBUFF_ADMIN_KEY`，保存后需要重新登录。
@@ -146,6 +149,10 @@ API Key 管理：
 Env 查看：
 
 ![Env 查看](docs/images/admin-env.png)
+
+服务器网络检测：
+
+![网络检测](docs/images/admin-network.png)
 
 运行日志：
 

@@ -70,13 +70,26 @@ def _accounts(request: Request) -> CodebuffAccountPool:
     return request.app.state.accounts
 
 
-def _check_local_auth(request: Request) -> None:
+def _check_local_auth(request: Request, *, require_configured: bool = False) -> None:
     api_key = _settings(request).local_api_key
     if not api_key:
+        if require_configured:
+            raise HTTPException(
+                status_code=503,
+                detail="Set FREEBUFF_API_KEY in the admin panel before using /v1 APIs",
+            )
         return
     expected = f"Bearer {api_key}"
     if request.headers.get("authorization") != expected:
         raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+def _check_freebuff_token(request: Request) -> None:
+    if not _settings(request).codebuff_tokens:
+        raise HTTPException(
+            status_code=503,
+            detail="Set FREEBUFF_TOKEN in the admin panel before using chat completions",
+        )
 
 
 def _error_response(error: Exception) -> JSONResponse:
@@ -102,13 +115,14 @@ async def healthz(request: Request) -> dict[str, Any]:
 
 @app.get("/v1/models")
 async def list_models(request: Request) -> dict[str, Any]:
-    _check_local_auth(request)
+    _check_local_auth(request, require_configured=True)
     return models_response()
 
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request) -> Any:
-    _check_local_auth(request)
+    _check_local_auth(request, require_configured=True)
+    _check_freebuff_token(request)
     body = await request.json()
     settings = _settings(request)
     try:
