@@ -4,6 +4,17 @@ Codebuff Freebuff 的 OpenAI-compatible API 适配服务。部署后可以像调
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/t479842598/freebuff2api-vercel&env=FREEBUFF_TOKEN,FREEBUFF_API_KEY,FREEBUFF_ADMIN_KEY&envDescription=FREEBUFF_TOKEN%20%E5%A1%AB%E5%86%99%20Freebuff%20token%EF%BC%8CFREEBUFF_API_KEY%20%E5%A1%AB%E5%86%99%20API%20%E8%AE%BF%E9%97%AE%E5%AF%86%E9%92%A5%EF%BC%8CFREEBUFF_ADMIN_KEY%20%E5%A1%AB%E5%86%99%E7%AE%A1%E7%90%86%E9%9D%A2%E6%9D%BF%E7%99%BB%E5%BD%95%E5%AF%86%E9%92%A5&envLink=https://github.com/t479842598/freebuff2api-vercel#%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F&project-name=freebuff2api-vercel&repository-name=freebuff2api-vercel)
 
+## 更新日志
+
+### 2026-06-10
+
+- 同步原始项目 `freebuff2api-main-oran` 的 Freebuff 上游兼容逻辑：HAR 风格请求头、固定上游 User-Agent、`Accept-Encoding` / `Connection` / `Host` 指纹、waiting-room 广告链路后的 `/api/v1/freebuff/streak` 调用。
+- 同步 OpenAI 消息标准化逻辑：`developer` 转 `system`，system message 添加 `cache_control: ephemeral`，缺少 system message 时自动注入 `You are Buffy...` 上游提示。
+- 新增 Freebuff 模型映射：`minimax/minimax-m3`、`mimo/mimo-v2.5`、`mimo/mimo-v2.5-pro`。
+- 移除 `FREEBUFF_BROWSER_UA` 示例配置，使用固定 HAR 浏览器 UA，避免部署环境意外改变上游请求指纹。
+- 保留当前管理版能力：`/admin` 管理面板、Vercel 入口、API Key 初始化保护、日志缓冲、本地 `.env` 写回和部署文档。
+- 限定 pytest 只收集当前项目 `tests/`，避免原始项目快照目录里的同名测试干扰。
+
 ## 功能
 
 - OpenAI-compatible Chat Completions API，可直接接入支持 OpenAI 格式的客户端。
