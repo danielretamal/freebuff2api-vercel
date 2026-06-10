@@ -1,73 +1,73 @@
 # freebuff2api
 
-Codebuff Freebuff 的 OpenAI-compatible API 适配服务。部署后可以像调用 OpenAI Chat Completions 一样调用 Freebuff 模型。
+An OpenAI-compatible API adapter for Codebuff Freebuff. After deployment, you can call Freebuff models just like OpenAI Chat Completions.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/t479842598/freebuff2api-vercel&env=FREEBUFF_TOKEN,FREEBUFF_API_KEY,FREEBUFF_ADMIN_KEY&envDescription=FREEBUFF_TOKEN%20%E5%A1%AB%E5%86%99%20Freebuff%20token%EF%BC%8CFREEBUFF_API_KEY%20%E5%A1%AB%E5%86%99%20API%20%E8%AE%BF%E9%97%AE%E5%AF%86%E9%92%A5%EF%BC%8CFREEBUFF_ADMIN_KEY%20%E5%A1%AB%E5%86%99%E7%AE%A1%E7%90%86%E9%9D%A2%E6%9D%BF%E7%99%BB%E5%BD%95%E5%AF%86%E9%92%A5&envLink=https://github.com/t479842598/freebuff2api-vercel#%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F&project-name=freebuff2api-vercel&repository-name=freebuff2api-vercel)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/t479842598/freebuff2api-vercel&env=FREEBUFF_TOKEN,FREEBUFF_API_KEY,FREEBUFF_ADMIN_KEY&envDescription=FREEBUFF_TOKEN:Freebuff%20token,FREEBUFF_API_KEY:API%20access%20key,FREEBUFF_ADMIN_KEY:Admin%20panel%20login%20key&envLink=https://github.com/t479842598/freebuff2api-vercel&project-name=freebuff2api-vercel&repository-name=freebuff2api-vercel)
 
-## 更新日志
+## Changelog
 
 ### 2026-06-10
 
-- 同步原始项目 `freebuff2api-main-oran` 的 Freebuff 上游兼容逻辑：HAR 风格请求头、固定上游 User-Agent、`Accept-Encoding` / `Connection` / `Host` 指纹、waiting-room 广告链路后的 `/api/v1/freebuff/streak` 调用。
-- 同步 OpenAI 消息标准化逻辑：`developer` 转 `system`，system message 添加 `cache_control: ephemeral`，缺少 system message 时自动注入 `You are Buffy...` 上游提示。
-- 新增 Freebuff 模型映射：`minimax/minimax-m3`、`mimo/mimo-v2.5`、`mimo/mimo-v2.5-pro`。
-- 移除 `FREEBUFF_BROWSER_UA` 示例配置，使用固定 HAR 浏览器 UA，避免部署环境意外改变上游请求指纹。
-- 保留当前管理版能力：`/admin` 管理面板、Vercel 入口、API Key 初始化保护、日志缓冲、本地 `.env` 写回和部署文档。
-- 限定 pytest 只收集当前项目 `tests/`，避免原始项目快照目录里的同名测试干扰。
+- Synced Freebuff upstream compatibility logic from the original project `freebuff2api-main-oran`: HAR-style request headers, fixed upstream User-Agent, `Accept-Encoding` / `Connection` / `Host` fingerprinting, `/api/v1/freebuff/streak` call after waiting-room ad chain.
+- Synced OpenAI message normalization: `developer` role converted to `system`, system messages get `cache_control: ephemeral`, auto-inject `You are Buffy...` upstream prompt when system message is missing.
+- Added Freebuff model mappings: `minimax/minimax-m3`, `mimo/mimo-v2.5`, `mimo/mimo-v2.5-pro`.
+- Removed `FREEBUFF_BROWSER_UA` example config; uses fixed HAR browser UA to avoid accidental upstream fingerprint changes.
+- Retained current admin edition features: `/admin` panel, Vercel entry point, API Key initialization protection, log buffering, local `.env` write-back, and deployment docs.
+- Restricted pytest to only collect the current project's `tests/`, avoiding interference from identically named tests in the original project's snapshot directory.
 
-## 功能
+## Features
 
-- OpenAI-compatible Chat Completions API，可直接接入支持 OpenAI 格式的客户端。
-- 支持流式和非流式对话，接口路径兼容 `/v1/chat/completions`。
-- 内置 Freebuff / Gemini free agent 模型映射，通过 `/v1/models` 获取模型列表。
-- 支持多个 `FREEBUFF_TOKEN` 账号池，并发请求会优先分配空闲账号。
-- 支持本地 API Key 鉴权，公开部署时可保护 `/v1/*` 接口。
-- 内置 Vue 3 + Naive UI 管理面板，可管理 Token、API Key、Env、日志和模型调用。
-- 支持 Vercel 部署；管理面板会明确提示 Vercel 环境变量需要在后台修改并重新部署。
+- OpenAI-compatible Chat Completions API — works with any OpenAI-format client.
+- Supports streaming and non-streaming with the standard `/v1/chat/completions` endpoint.
+- Built-in Freebuff / Gemini free agent model mappings, available via `/v1/models`.
+- Multiple `FREEBUFF_TOKEN` account pool; concurrent requests prioritize idle accounts.
+- Local API Key authentication to protect `/v1/*` endpoints in public deployments.
+- Built-in Vue 3 + Naive UI admin panel for managing tokens, API keys, env, logs, and model testing.
+- Vercel deployment support; the admin panel clearly indicates that Vercel env variables must be modified in the dashboard and redeployed.
 
-## 接口
+## Endpoints
 
 - `GET /healthz`
 - `GET /v1/models`
 - `POST /v1/chat/completions`
-- `GET /admin` 管理面板
+- `GET /admin` — Admin panel
 
-## 快速开始
+## Quick Start
 
-### 1. 获取 Freebuff Token
+### 1. Get a Freebuff Token
 
-无需安装 Freebuff / Codebuff CLI，可以直接打开公开页面自动获取 token：
+No need to install the Freebuff / Codebuff CLI. Open the public page to get a token:
 
 ```text
 https://freebuff.071129.xyz/
 ```
 
-操作流程：
+Steps:
 
-1. 打开上面的地址。
-2. 选择 `Freebuff`。
-3. 点击“开始认证”，在跳转页面完成授权。
-4. 回到页面复制展示的 token。
-5. 本地运行时写入 `.env`；部署 Vercel 时写入 Vercel 的 Environment Variables。
+1. Open the URL above.
+2. Select `Freebuff`.
+3. Click "Start Auth" and complete authorization on the redirected page.
+4. Copy the displayed token.
+5. Write it to `.env` for local use, or to Vercel Environment Variables for deployment.
 
-示例：
+Example:
 
 ```dotenv
-FREEBUFF_TOKEN=你的 Freebuff Bearer token
+FREEBUFF_TOKEN=your Freebuff Bearer token
 ```
 
-多账号可用英文逗号分隔。并发请求会优先分配到空闲账号，避免单个 Freebuff 账号的全局 active free session 被并发切模型请求互相覆盖：
+Multiple tokens can be separated by commas. Concurrent requests will prioritize idle accounts, preventing a single Freebuff account's active free session from being overwritten by concurrent model requests:
 
 ```dotenv
 FREEBUFF_TOKEN=token-a,token-b,token-c
 ```
 
-### 2. 本地配置
+### 2. Local Configuration
 
-新建 `.env` 文件并填写：
+Create a `.env` file and fill it in:
 
 ```dotenv
-FREEBUFF_TOKEN=你的 Freebuff Bearer token
+FREEBUFF_TOKEN=your Freebuff Bearer token
 FREEBUFF_API_KEY=
 FREEBUFF_ADMIN_KEY=sk-admin
 FREEBUFF_API_BASE_URL=https://www.codebuff.com
@@ -87,219 +87,219 @@ FREEBUFF_LOCALE=zh-CN
 FREEBUFF_OS=windows
 ```
 
-`FREEBUFF_ADMIN_KEY` 默认是 `sk-admin`。启动后可以先用这个默认 key 进入管理面板，再在设置页修改成自己的管理员密钥。公开部署时请务必修改默认值。
+`FREEBUFF_ADMIN_KEY` defaults to `sk-admin`. You can use this default key to log into the admin panel, then change it in the Settings page. Make sure to change it for public deployments.
 
-`FREEBUFF_TOKEN` 和 `FREEBUFF_API_KEY` 可以先留空，进入管理面板后按页面提示填写。保存后本地或常驻服务器会写回 `.env`，并在当前进程中热更新生效；Vercel 环境会返回应粘贴到 Environment Variables 的文本。
+`FREEBUFF_TOKEN` and `FREEBUFF_API_KEY` can be left blank initially and filled in via the admin panel. On local/persistent servers, saving will write back to `.env` and hot-reload in the current process. On Vercel, the environment variable text will be returned for you to paste.
 
-`FREEBUFF_API_KEY` 是你自己给这个 API 服务设置的访问密钥。设置后，请求时需要带上：
+`FREEBUFF_API_KEY` is the access key you set for this API service. Once set, requests must include:
 
 ```http
-Authorization: Bearer 你的本地 API key
+Authorization: Bearer your local API key
 ```
 
-如果 `FREEBUFF_API_KEY` 留空，`/v1/*` API 会返回配置错误，避免公开部署时无鉴权暴露；管理面板仍可访问，用来完成初始化。
+If `FREEBUFF_API_KEY` is left empty, the `/v1/*` API will return a configuration error to prevent unauthorized access in public deployments. The admin panel remains accessible for initialization.
 
-### 3. 本地运行
+### 3. Local Run
 
-推荐使用 `uv`：
+Recommended with `uv`:
 
 ```powershell
 uv sync
 uv run freebuff2api
 ```
 
-也可以使用 `pip`：
+Or with `pip`:
 
 ```powershell
 python -m pip install -r requirements.txt
 python main.py
 ```
 
-启动后访问：
+After starting, visit:
 
 ```text
 http://127.0.0.1:8000/healthz
 ```
 
-## 管理面板
+## Admin Panel
 
-启动主服务后访问：
+After starting the service, visit:
 
 ```text
 http://127.0.0.1:8000/admin
 ```
 
-管理面板使用 Vue 3 + Naive UI 的浏览器版实现，不需要单独运行前端构建。第一版包含：
+The admin panel is built with Vue 3 + Naive UI (browser version, no separate frontend build required). It includes:
 
-- 概览：查看服务状态、账号池数量、模型数量、日志等级和部署环境。
-- Token 管理：以列表形式显示 Freebuff Token，默认只展示脱敏值；点击添加会打开 Token 获取页面，复制 token 后回到面板粘贴保存；支持行内修改、行内删除和单条验证。
-- API Key：单独管理 `FREEBUFF_API_KEY`，用于 `/v1/*` 接口的 `Authorization: Bearer <key>`。
-- Env：查看本地项目根目录 `.env` 内容，并复制当前配置文本。
-- 网络：检测当前服务器公网 IP、国家/地区、城市、时区、运营商、代理状态以及 Codebuff/Freebuff 连通性。
-- 日志：查看当前进程内存中的最近运行日志，进入日志页后默认自动刷新，也可按等级筛选、手动刷新和复制。
-- 模型调用：从 `/v1/models` 同结构的模型列表中选择模型，再用当前配置发起一次简单的非流式调用测试。
-- 设置：修改 `FREEBUFF_ADMIN_KEY`，保存后需要重新登录。
+- **Overview**: Service status, account pool count, model count, log level, and deployment environment.
+- **Token Management**: Displays Freebuff Tokens in a list (masked by default). Clicking "Add" opens the token retrieval page; copy the token and paste it back. Supports inline edit, delete, and per-token verification.
+- **API Key**: Manage `FREEBUFF_API_KEY` separately for `/v1/*` endpoint authorization.
+- **Env**: View the project's `.env` content and copy the current configuration text.
+- **Network**: Detect server public IP, country/region, city, timezone, ISP, proxy status, and Codebuff/Freebuff connectivity.
+- **Logs**: View recent in-memory runtime logs. Auto-refresh is enabled by default on the logs page. Supports level filtering, manual refresh, and copy.
+- **Model Test**: Select a model from the `/v1/models` list and run a simple non-streaming test call.
+- **Settings**: Change `FREEBUFF_ADMIN_KEY`; requires re-login after saving.
 
-注意：为了避免默认暴露密钥，Token 列表不会显示完整 token。只有点击某一行的“修改”时，后台才会读取该行完整 token 并显示在弹窗里。
+Note: To avoid accidental key exposure, the token list never shows the full token. Only when you click "Edit" on a row does the server read and display the full token in a dialog.
 
-### 管理面板截图
+### Admin Panel Screenshots
 
-概览页：
+Overview:
 
-![管理面板概览](docs/images/admin-overview.png)
+![Admin Overview](docs/images/admin-overview.png)
 
-Token 管理：
+Token Management:
 
-![Token 管理](docs/images/admin-tokens.png)
+![Token Management](docs/images/admin-tokens.png)
 
-API Key 管理：
+API Key Management:
 
-![API Key 管理](docs/images/admin-api-key.png)
+![API Key Management](docs/images/admin-api-key.png)
 
-Env 查看：
+Env View:
 
-![Env 查看](docs/images/admin-env.png)
+![Env View](docs/images/admin-env.png)
 
-服务器网络检测：
+Network Detection:
 
-![网络检测](docs/images/admin-network.png)
+![Network Detection](docs/images/admin-network.png)
 
-运行日志：
+Runtime Logs:
 
-![运行日志](docs/images/admin-logs.png)
+![Runtime Logs](docs/images/admin-logs.png)
 
-模型调用：
+Model Test:
 
-![模型调用](docs/images/admin-test.png)
+![Model Test](docs/images/admin-test.png)
 
-### Vercel 上的限制
+### Vercel Limitations
 
-管理页面可以随项目一起部署到 Vercel，但 Vercel Serverless 环境不适合运行期永久写入 `.env`。在 Vercel 上使用管理面板时：
+The admin panel can be deployed with Vercel, but Vercel's serverless environment does not support persistent `.env` writes at runtime. When using the admin panel on Vercel:
 
-- 状态页、日志页、模型调用页只反映当前函数实例的状态。
-- Token/API Key 保存页会返回应配置的环境变量文本，例如 `FREEBUFF_TOKEN=...`。
-- Env 页面会提示到 Vercel 项目 `Settings` -> `Environment Variables` 修改变量。
-- 需要到 Vercel 项目后台的 `Settings` -> `Environment Variables` 粘贴变量并重新部署。
-- 修改 `FREEBUFF_ADMIN_KEY` / `FREEBUFF_API_KEY` 后同样需要通过 Vercel 环境变量持久化。
+- The status, logs, and model test pages reflect the current function instance's state only.
+- Token/API Key save pages return the environment variable text to configure, e.g., `FREEBUFF_TOKEN=...`.
+- The Env page will direct you to modify variables in Vercel's `Settings` -> `Environment Variables`.
+- Go to the Vercel project's `Settings` -> `Environment Variables` to paste variables and redeploy.
+- Changes to `FREEBUFF_ADMIN_KEY` / `FREEBUFF_API_KEY` also need to be persisted through Vercel environment variables.
 
-## 部署方式
+## Deployment
 
-### 本地或服务器常驻部署
+### Local or Server Deployment
 
-适合自己电脑、VPS、云服务器、NAS 等可以长期运行 Python 进程的环境。
+Suitable for personal computers, VPS, cloud servers, NAS, or any environment that can run a long-lived Python process.
 
-1. 准备 `.env`，至少填写 `FREEBUFF_TOKEN`、`FREEBUFF_API_KEY`、`FREEBUFF_ADMIN_KEY`。
-2. 安装依赖并启动：
+1. Prepare `.env` with at least `FREEBUFF_TOKEN`, `FREEBUFF_API_KEY`, `FREEBUFF_ADMIN_KEY`.
+2. Install dependencies and start:
 
 ```powershell
 python -m pip install -r requirements.txt
 python main.py
 ```
 
-也可以使用 `uv`：
+Or with `uv`:
 
 ```powershell
 uv sync
 uv run freebuff2api
 ```
 
-默认监听 `0.0.0.0:8000`。需要改端口时，在 `.env` 中设置：
+Listens on `0.0.0.0:8000` by default. To change the port, set in `.env`:
 
 ```dotenv
 FREEBUFF_HOST=0.0.0.0
 FREEBUFF_PORT=8000
 ```
 
-本地或服务器常驻部署时，管理面板里的 Token/API Key/Admin Key 保存会写回项目根目录 `.env`，并在当前进程内立即生效。生产环境建议用进程管理工具托管，例如 systemd、PM2、Docker、宝塔 Supervisor 或 Windows 任务计划。
+On local/persistent servers, admin panel Token/API Key/Admin Key saves write back to the project root `.env` and take effect immediately in the current process. For production, use a process manager like systemd, PM2, Docker, Supervisord, or Windows Task Scheduler.
 
-### GitHub + Vercel 自动部署
+### GitHub + Vercel Auto Deploy
 
-适合把项目推送到 GitHub 后，由 Vercel 自动构建和重新部署。
+Suitable for pushing the project to GitHub and having Vercel automatically build and redeploy.
 
-流程：
+Workflow:
 
-1. 确认 `.env` 不会提交到 GitHub；本项目 `.gitignore` 已默认忽略 `.env`。
-2. 将代码推送到 GitHub 仓库。
-3. 在 Vercel 导入该 GitHub 仓库。
-4. 在 Vercel 项目 `Settings` -> `Environment Variables` 添加变量。
-5. 首次导入后点击 `Deploy`。
-6. 之后每次推送到绑定分支，Vercel 会自动重新部署代码。
+1. Make sure `.env` is not committed to GitHub (the `.gitignore` already ignores `.env`).
+2. Push the code to your GitHub repository.
+3. Import the GitHub repository into Vercel.
+4. Add variables in Vercel project `Settings` -> `Environment Variables`.
+5. Click `Deploy` after the first import.
+6. Subsequent pushes to the linked branch will trigger automatic Vercel redeployment.
 
-如果只是修改 Vercel 后台环境变量，例如 `FREEBUFF_TOKEN`、`FREEBUFF_API_KEY`、`FREEBUFF_ADMIN_KEY`，不会因为 GitHub 推送自动变化；需要在 Vercel 的 `Deployments` 页面手动 `Redeploy`，让新环境变量进入新的函数实例。
+If you only modify Vercel environment variables (e.g., `FREEBUFF_TOKEN`, `FREEBUFF_API_KEY`, `FREEBUFF_ADMIN_KEY`), they won't change automatically with a GitHub push. Go to Vercel `Deployments` and manually click `Redeploy` to apply the new environment variables.
 
-Vercel 上管理面板可以访问，但不能持久写入 `.env`。管理面板里的 Env 页面会提示你到 Vercel Environment Variables 修改变量并重新部署。
+The admin panel is accessible on Vercel but cannot persist `.env` writes. The Env page will prompt you to modify variables in Vercel Environment Variables and redeploy.
 
-### Vercel 一键部署
+### One-Click Vercel Deploy
 
-点击文档顶部的 `Deploy with Vercel` 按钮，按页面提示导入仓库并填写环境变量即可。
+Click the `Deploy with Vercel` button at the top of this document, follow the prompts to import the repository, and fill in the environment variables.
 
-### 从 GitHub 手动导入 Vercel
+### Manual Import from GitHub to Vercel
 
-1. 将项目推送到 GitHub。
-2. 打开 Vercel，选择 `Add New` -> `Project`。
-3. 选择你的 GitHub 仓库并点击 `Import`。
-4. 配置项目参数。
-5. 添加环境变量。
-6. 点击 `Deploy`。
+1. Push the project to GitHub.
+2. Open Vercel, select `Add New` -> `Project`.
+3. Select your GitHub repository and click `Import`.
+4. Configure project settings.
+5. Add environment variables.
+6. Click `Deploy`.
 
-Vercel 页面推荐填写：
+Recommended Vercel configuration:
 
-| 配置项 | 推荐值 |
+| Setting | Value |
 | --- | --- |
 | Application Preset | `FastAPI` |
 | Root Directory | `./` |
-| Build Command | 留空 / `None` |
-| Output Directory | 留空 / `N/A` |
+| Build Command | Leave empty / `None` |
+| Output Directory | Leave empty / `N/A` |
 | Install Command | `pip install -r requirements.txt` |
 
-项目已经包含 Vercel 入口文件和路由配置：
+The project already includes the Vercel entry point and routing config:
 
-- `api/index.py`：导出 FastAPI `app`。
-- `vercel.json`：把所有请求转发到 `/api/index.py`。
-- `requirements.txt`：给 Vercel 安装 Python 依赖。
+- `api/index.py`: Exports the FastAPI `app`.
+- `vercel.json`: Forwards all requests to `/api/index.py`.
+- `requirements.txt`: For Vercel to install Python dependencies.
 
-### 环境变量
+### Environment Variables
 
-Vercel 不会读取你本地的 `.env` 文件，线上变量需要在 Vercel 后台单独配置。
+Vercel does not read your local `.env` file. Production variables must be configured separately in the Vercel dashboard.
 
-填写流程：
+Setup steps:
 
-1. 打开 Vercel 项目页面。
-2. 进入 `Settings` -> `Environment Variables`。
-3. 在 `Key` 填变量名，例如 `FREEBUFF_TOKEN`。
-4. 在 `Value` 填变量值，例如你的 Freebuff token。
-5. `Environment` 建议至少勾选 `Production`；需要预览部署也能使用时，再勾选 `Preview`。
-6. 点击 `Save` 或 `Add` 保存。
-7. 重复添加其它变量。
-8. 添加或修改完成后，进入 `Deployments`，点击最新部署的 `Redeploy`。
+1. Open your Vercel project page.
+2. Go to `Settings` -> `Environment Variables`.
+3. Enter the variable name in `Key`, e.g., `FREEBUFF_TOKEN`.
+4. Enter the variable value in `Value`, e.g., your Freebuff token.
+5. For `Environment`, check at least `Production`; check `Preview` if needed for preview deployments.
+6. Click `Save` or `Add`.
+7. Repeat for other variables.
+8. After adding or modifying, go to `Deployments` and click `Redeploy` on the latest deployment.
 
-至少填写：
+At minimum, fill in:
 
 ```dotenv
-FREEBUFF_TOKEN=你的 Freebuff Bearer token
-FREEBUFF_API_KEY=你自己设置的访问密钥
-FREEBUFF_ADMIN_KEY=管理后台登录密钥
+FREEBUFF_TOKEN=your Freebuff Bearer token
+FREEBUFF_API_KEY=your API access key
+FREEBUFF_ADMIN_KEY=admin panel login key
 ```
 
-变量含义：
+Variable reference:
 
-| 变量名 | 是否必填 | 说明 |
+| Variable | Required | Description |
 | --- | --- | --- |
-| `FREEBUFF_TOKEN` | 是 | Freebuff / Codebuff 的上游 token，支持多个 token 用英文逗号分隔。 |
-| `FREEBUFF_API_KEY` | 强烈建议 | 你自己给当前 API 服务设置的访问密钥；客户端请求时使用 `Authorization: Bearer <FREEBUFF_API_KEY>`。 |
-| `FREEBUFF_ADMIN_KEY` | 强烈建议 | 管理后台 `/admin` 的登录密钥；建议和 `FREEBUFF_API_KEY` 使用不同的值。 |
-| `FREEBUFF_API_BASE_URL` | 否 | Codebuff 上游地址，默认 `https://www.codebuff.com`。 |
-| `FREEBUFF_AD_PROVIDERS` | 否 | 广告链提供方，默认 `gravity,zeroclick`。 |
-| `FREEBUFF_TIMEOUT` | 否 | 上游请求超时时间，默认 `60` 秒。 |
-| `FREEBUFF_PROXY_ENABLED` | 否 | 是否启用代理；Vercel 上通常填 `false`。 |
-| `FREEBUFF_DEBUG` | 否 | 是否开启调试日志；排查问题时可临时改为 `true`。 |
-| `FREEBUFF_LOG_LEVEL` | 否 | 日志等级，默认 `INFO`。 |
-| `FREEBUFF_ADMIN_LOG_LINES` | 否 | 管理面板内存日志保留行数，默认 `1000`。 |
-| `FREEBUFF_TIMEZONE` | 否 | 上游请求使用的时区标识，默认 `Asia/Shanghai`。 |
-| `FREEBUFF_LOCALE` | 否 | 上游请求使用的语言区域，默认 `zh-CN`。 |
-| `FREEBUFF_OS` | 否 | 上游请求模拟的系统类型，默认 `windows`。 |
+| `FREEBUFF_TOKEN` | Yes | Upstream Freebuff / Codebuff token. Multiple tokens supported, comma-separated. |
+| `FREEBUFF_API_KEY` | Strongly recommended | The access key for this API service. Clients use `Authorization: Bearer <FREEBUFF_API_KEY>`. |
+| `FREEBUFF_ADMIN_KEY` | Strongly recommended | Login key for the `/admin` panel. Use a different value from `FREEBUFF_API_KEY`. |
+| `FREEBUFF_API_BASE_URL` | No | Codebuff upstream URL, default `https://www.codebuff.com`. |
+| `FREEBUFF_AD_PROVIDERS` | No | Ad chain providers, default `gravity,zeroclick`. |
+| `FREEBUFF_TIMEOUT` | No | Upstream request timeout in seconds, default `60`. |
+| `FREEBUFF_PROXY_ENABLED` | No | Whether to enable proxy. Usually `false` on Vercel. |
+| `FREEBUFF_DEBUG` | No | Enable debug logging. Set to `true` temporarily for troubleshooting. |
+| `FREEBUFF_LOG_LEVEL` | No | Log level, default `INFO`. |
+| `FREEBUFF_ADMIN_LOG_LINES` | No | Number of log lines retained in admin panel memory, default `1000`. |
+| `FREEBUFF_TIMEZONE` | No | Timezone identifier for upstream requests, default `Asia/Shanghai`. |
+| `FREEBUFF_LOCALE` | No | Locale for upstream requests, default `zh-CN`. |
+| `FREEBUFF_OS` | No | OS type for upstream simulation, default `windows`. |
 
-推荐同时填写：
+Recommended additional variables:
 
 ```dotenv
 FREEBUFF_API_BASE_URL=https://www.codebuff.com
@@ -316,19 +316,19 @@ FREEBUFF_LOCALE=zh-CN
 FREEBUFF_OS=windows
 ```
 
-Vercel 上不要填写本机代理地址，例如：
+Do not fill in local proxy addresses on Vercel, e.g.:
 
 ```dotenv
 FREEBUFF_PROXY_URL=socks5://127.0.0.1:7890
 ```
 
-`127.0.0.1` 在 Vercel 云端代表 Vercel 自己的运行环境，不是你的电脑。
+`127.0.0.1` on Vercel refers to Vercel's own environment, not your machine.
 
-`FREEBUFF_HOST` 和 `FREEBUFF_PORT` 主要用于本地运行，Vercel 部署时不需要填写。
+`FREEBUFF_HOST` and `FREEBUFF_PORT` are mainly for local operation and don't need to be set on Vercel.
 
-### 部署地区
+### Deployment Region
 
-项目已经在 `vercel.json` 中设置：
+The project already configures the region in `vercel.json`:
 
 ```json
 {
@@ -336,68 +336,68 @@ FREEBUFF_PROXY_URL=socks5://127.0.0.1:7890
 }
 ```
 
-`iad1` 是 Vercel 的 Washington, D.C., USA (East) 区域。Freebuff 上游对免费模型有 IP/区域限制，建议保持 US 区域；如果部署到非 US 区域，可能会遇到类似下面的上游错误：
+`iad1` is Vercel's Washington, D.C., USA (East) region. Freebuff upstream has IP/region restrictions for free models. It is recommended to keep the US region. Deploying to a non-US region may result in upstream errors like:
 
 ```text
-Codebuff 409 session_model_mismatch: Limited free access is only available with DeepSeek V4 Flash. 当前 IP/区域受限；请换用 US 服务器或 US 出口 IP 后重试。
+Codebuff 409 session_model_mismatch: Limited free access is only available with DeepSeek V4 Flash. Current IP/region restricted; please use a US server or US egress IP and try again.
 ```
 
-你之前部署日志里显示：
+Your previous deployment logs showed:
 
 ```text
 Running build in Washington, D.C., USA (East) - iad1
 ```
 
-这表示当前构建运行在 `iad1`。重新部署后，也建议在 Vercel 部署日志或项目设置里确认函数区域仍为 `iad1`。
+This indicates the current build runs in `iad1`. After redeployment, it is also recommended to confirm the function region is still `iad1` in the Vercel deployment logs or project settings.
 
-如果你需要在 Vercel 后台确认或调整地区：
+If you need to verify or change the region in Vercel:
 
-1. 打开 Vercel 项目页面。
-2. 进入 `Settings`。
-3. 找到 `Functions` 或 `Function Region` 相关配置。
-4. 选择需要的区域，例如 `Washington, D.C., USA (East) - iad1`。
-5. 保存后重新部署。
+1. Open your Vercel project page.
+2. Go to `Settings`.
+3. Find `Functions` or `Function Region` settings.
+4. Select the desired region, e.g., `Washington, D.C., USA (East) - iad1`.
+5. Save and redeploy.
 
-一般建议保持 `iad1`。这个项目访问者到 Vercel 的距离不是主要瓶颈，上游 Codebuff / Freebuff 对出口 IP/区域的限制更关键。
+Generally, keep `iad1`. The distance from Vercel to your users is not the main bottleneck — the upstream Codebuff/Freebuff egress IP/region restrictions are more critical.
 
-### 绑定自定义域名
+### Custom Domain
 
-Vercel 默认会分配一个 `*.vercel.app` 域名。如果你有自己的域名，可以在 Vercel 后台绑定。
+Vercel assigns a `*.vercel.app` domain by default. If you have your own domain, you can bind it in the Vercel dashboard.
 
-操作流程：
+Setup steps:
 
-1. 打开 Vercel 项目页面。
-2. 进入 `Settings` -> `Domains`。
-3. 在输入框填写你的域名，例如 `api.example.com` 或 `example.com`。
-4. 点击 `Add`。
-5. 按 Vercel 页面提示，到你的域名服务商后台添加 DNS 记录。
-6. 回到 Vercel 等待校验通过，状态变成 `Valid Configuration` 后即可访问。
+1. Open your Vercel project page.
+2. Go to `Settings` -> `Domains`.
+3. Enter your domain in the input, e.g., `api.example.com` or `example.com`.
+4. Click `Add`.
+5. Follow Vercel's instructions to add DNS records at your domain registrar.
+6. Return to Vercel and wait for validation. When the status changes to `Valid Configuration`, you can access it.
 
-常见 DNS 配置：
+Common DNS configurations:
 
-| 使用方式 | DNS 类型 | 主机记录 | 记录值 |
+| Usage | DNS Type | Host Record | Value |
 | --- | --- | --- | --- |
-| 子域名，例如 `api.example.com` | `CNAME` | `api` | `cname.vercel-dns.com` |
-| 根域名，例如 `example.com` | `A` | `@` | `76.76.21.21` |
+| Subdomain, e.g., `api.example.com` | `CNAME` | `api` | `cname.vercel-dns.com` |
+| Apex domain, e.g., `example.com` | `A` | `@` | `76.76.21.21` |
 | `www.example.com` | `CNAME` | `www` | `cname.vercel-dns.com` |
 
-不同域名服务商的字段名称可能不一样。`主机记录` 也可能叫 `Name`、`Host` 或 `Record Name`；`记录值` 也可能叫 `Value`、`Target` 或 `Points to`。
+Different domain registrars may use different field names. `Host Record` may be called `Name`, `Host`, or `Record Name`; `Value` may be called `Target` or `Points to`.
 
-DNS 生效后，Vercel 会自动签发 HTTPS 证书。一般几分钟内完成，少数域名服务商可能需要更久。
+Once DNS propagates, Vercel automatically issues an HTTPS certificate. This usually takes a few minutes, though some registrars may take longer.
 
-绑定后调用接口时，把示例里的 Vercel 域名换成你的自定义域名即可：
+After binding, replace the Vercel domain in the examples with your custom domain:
 
 ```text
 https://api.example.com/v1/chat/completions
 ```
 
-如果你同时绑定了根域名和 `www` 域名，可以在 `Settings` -> `Domains` 里设置其中一个作为主域名，另一个自动跳转过去。API 服务通常更推荐使用单独子域名，例如 `api.example.com`。
+If you bind both an apex domain and a `www` domain, you can set one as the primary domain in `Settings` -> `Domains`, and the other will automatically redirect. For API services, a separate subdomain like `api.example.com` is recommended.
 
-### 更新 Token 或环境变量
+### Updating Token or Environment Variables
 
-如果只是修改了 Vercel 后台的 `FREEBUFF_TOKEN`、`FREEBUFF_API_KEY` 等环境变量，需要在 Vercel 的 `Deployments` 页面点击 `Redeploy`，让新环境变量进入新的部署。
+If you only modify Vercel environment variables like `FREEBUFF_TOKEN` or `FREEBUFF_API_KEY` in the Vercel dashboard, go to `Deployments` and click `Redeploy` to apply them.
 
-如果是修改代码并推送到 GitHub，Vercel 会自动重新部署绑定分支。通常推送到 `main` 分支会更新生产环境：
+If you modify code and push to GitHub, Vercel automatically redeploys the linked branch. Usually, pushing to `main` updates the production environment:
 
 ```powershell
 git add .
@@ -405,58 +405,58 @@ git commit -m "Update project"
 git push
 ```
 
-## 调用示例
+## Usage Examples
 
-把下面的地址替换成你的本地地址或 Vercel 域名：
+Replace the addresses below with your local address or Vercel domain:
 
 ```text
 http://127.0.0.1:8000
-https://你的项目名.vercel.app
+https://your-project-name.vercel.app
 ```
 
-### 查看健康状态
+### Health Check
 
 ```powershell
-curl https://你的项目名.vercel.app/healthz `
+curl https://your-project-name.vercel.app/healthz `
   -H "Authorization: Bearer $env:FREEBUFF_API_KEY"
 ```
 
-### 查看模型列表
+### List Models
 
 ```powershell
-curl https://你的项目名.vercel.app/v1/models `
+curl https://your-project-name.vercel.app/v1/models `
   -H "Authorization: Bearer $env:FREEBUFF_API_KEY"
 ```
 
-### 非流式对话
+### Non-Streaming Chat
 
 ```powershell
-curl https://你的项目名.vercel.app/v1/chat/completions `
+curl https://your-project-name.vercel.app/v1/chat/completions `
   -H "Authorization: Bearer $env:FREEBUFF_API_KEY" `
   -H "Content-Type: application/json" `
   -d '{
     "model": "deepseek/deepseek-v4-flash",
-    "messages": [{"role": "user", "content": "你好"}],
+    "messages": [{"role": "user", "content": "Hello"}],
     "stream": false
   }'
 ```
 
-### 流式对话
+### Streaming Chat
 
 ```powershell
-curl -N https://你的项目名.vercel.app/v1/chat/completions `
+curl -N https://your-project-name.vercel.app/v1/chat/completions `
   -H "Authorization: Bearer $env:FREEBUFF_API_KEY" `
   -H "Content-Type: application/json" `
   -d '{
     "model": "deepseek/deepseek-v4-flash",
-    "messages": [{"role": "user", "content": "写一个 Python 快排"}],
+    "messages": [{"role": "user", "content": "Write a Python quicksort"}],
     "stream": true
   }'
 ```
 
-## 模型
+## Models
 
-当前内置 Freebuff 模型：
+Current built-in Freebuff models:
 
 - `deepseek/deepseek-v4-flash`
 - `deepseek/deepseek-v4-pro`
@@ -466,26 +466,26 @@ curl -N https://你的项目名.vercel.app/v1/chat/completions `
 - `mimo/mimo-v2.5`
 - `mimo/mimo-v2.5-pro`
 
-当前内置 Gemini free agent 组合：
+Current built-in Gemini free agent combinations:
 
-- `google/gemini-2.5-flash-lite` -> `base2-free-deepseek-flash` 父 agent + `file-picker` 子 agent
-- `google/gemini-3.1-flash-lite-preview` -> `base2-free-deepseek-flash` 父 agent + `file-picker-max` 子 agent
-- `google/gemini-3.1-pro-preview` -> `base2-free-kimi` 父 agent + `thinker-with-files-gemini` 子 agent
+- `google/gemini-2.5-flash-lite` -> `base2-free-deepseek-flash` parent agent + `file-picker` child agent
+- `google/gemini-3.1-flash-lite-preview` -> `base2-free-deepseek-flash` parent agent + `file-picker-max` child agent
+- `google/gemini-3.1-pro-preview` -> `base2-free-kimi` parent agent + `thinker-with-files-gemini` child agent
 
-调用 Gemini 时无需手动传 agent。项目会把 OpenAI 请求中的 `model` 解析为上游允许的 `agentId + model` 组合，并继续在 `codebuff_metadata.cost_mode=free` 下请求。Gemini free agents 会自动作为 active Freebuff session root 的子 agent 运行；未知模型不会自动兜底到 Gemini。
+No need to manually pass an agent when calling Gemini. The project resolves the OpenAI `model` field into the upstream `agentId + model` combination and continues requesting under `codebuff_metadata.cost_mode=free`. Gemini free agents automatically run as child agents of the active Freebuff session root. Unknown models will not fall back to Gemini.
 
-## 代理与调试
+## Proxy & Debug
 
-默认不启用代理，所有上游请求直连，且不会读取系统 `HTTP_PROXY` / `HTTPS_PROXY`。
+Proxy is disabled by default. All upstream requests connect directly and do not read the system `HTTP_PROXY` / `HTTPS_PROXY`.
 
-本地需要让所有上游请求经过代理时，在 `.env` 中开启：
+To route all upstream requests through a proxy locally, enable it in `.env`:
 
 ```dotenv
 FREEBUFF_PROXY_ENABLED=true
 FREEBUFF_PROXY_URL=http://127.0.0.1:7890
 ```
 
-支持 HTTP 和 SOCKS 代理，例如：
+Supports HTTP and SOCKS proxies:
 
 ```dotenv
 FREEBUFF_PROXY_URL=http://127.0.0.1:7890
@@ -493,7 +493,7 @@ FREEBUFF_PROXY_URL=socks5://127.0.0.1:1080
 FREEBUFF_PROXY_URL=socks5h://127.0.0.1:1080
 ```
 
-调试空返回或上游异常时：
+For debugging empty responses or upstream errors:
 
 ```dotenv
 FREEBUFF_DEBUG=true
@@ -501,21 +501,21 @@ FREEBUFF_LOG_LEVEL=DEBUG
 FREEBUFF_LOG_BODY_CHARS=0
 ```
 
-## 测试与验证
+## Testing & Verification
 
-本地修改代码后，建议先运行完整测试：
+After modifying code locally, run the full test suite:
 
 ```powershell
 python -m pytest -q
 ```
 
-如果只改了管理面板或配置逻辑，可以先跑相关测试：
+If only the admin panel or config logic changed, run the relevant tests:
 
 ```powershell
 python -m pytest tests/test_admin.py tests/test_config.py -q
 ```
 
-本地启动后可以做一次基础连通性检查：
+After starting locally, do a basic connectivity check:
 
 ```powershell
 curl http://127.0.0.1:8000/healthz `
@@ -525,37 +525,37 @@ curl http://127.0.0.1:8000/v1/models `
   -H "Authorization: Bearer $env:FREEBUFF_API_KEY"
 ```
 
-管理面板检查项：
+Admin panel checklist:
 
-1. 打开 `http://127.0.0.1:8000/admin`。
-2. 使用 `FREEBUFF_ADMIN_KEY` 登录；未设置时可临时使用 `FREEBUFF_API_KEY`。
-3. 在 Token 页面确认列表默认脱敏；点击“添加 Token”会打开 `https://freebuff.071129.xyz/` 并提示复制 token 后粘贴保存；点击“修改”时才显示完整 token。
-4. 在 API Key 页面确认可单独更新 `FREEBUFF_API_KEY`。
-5. 在 Env 页面确认本地显示 `.env`，Vercel 部署时提示去 Environment Variables 修改并重新部署。
-6. 在日志页面确认能看到当前进程日志，并且自动刷新开关默认开启。
-7. 在模型调用页面确认模型列表来自 `/v1/models` 同结构数据。
+1. Open `http://127.0.0.1:8000/admin`.
+2. Log in with `FREEBUFF_ADMIN_KEY`; if not set, `FREEBUFF_API_KEY` can be used temporarily.
+3. On the Token page, confirm tokens are masked by default; clicking "Add Token" opens `https://freebuff.071129.xyz/` and prompts to paste the token; clicking "Edit" reveals the full token.
+4. On the API Key page, confirm you can update `FREEBUFF_API_KEY` independently.
+5. On the Env page, confirm local `.env` is displayed; on Vercel, it prompts to use Environment Variables.
+6. On the Logs page, confirm you can see current process logs and auto-refresh is enabled by default.
+7. On the Test page, confirm the model list comes from `/v1/models`.
 
-Vercel 自动部署完成后，建议检查：
+After Vercel auto-deployment, run a quick check:
 
 ```powershell
-curl https://你的项目名.vercel.app/healthz `
-  -H "Authorization: Bearer 你的 FREEBUFF_API_KEY"
+curl https://your-project-name.vercel.app/healthz `
+  -H "Authorization: Bearer your FREEBUFF_API_KEY"
 
-curl https://你的项目名.vercel.app/v1/models `
-  -H "Authorization: Bearer 你的 FREEBUFF_API_KEY"
+curl https://your-project-name.vercel.app/v1/models `
+  -H "Authorization: Bearer your FREEBUFF_API_KEY"
 ```
 
-README 截图位于 `docs/images/`，截图使用演示 token 和演示 key，不包含真实密钥。更新管理面板 UI 后，可以重新生成截图并替换这些 PNG。
+Screenshots in the README are in `docs/images/`. They use demo tokens and demo keys, not real secrets. After updating the admin panel UI, regenerate and replace these PNGs.
 
-## 注意事项
+## Notes
 
-- 不要把 `.env` 提交到 GitHub。
-- 公开部署时建议一定设置 `FREEBUFF_API_KEY` 和 `FREEBUFF_ADMIN_KEY`。
-- Vercel 免费计划的 Serverless Function 有执行时长限制，长时间流式请求可能受到平台限制。
-- 修改 Vercel 环境变量后需要手动 `Redeploy`；修改代码并推送到绑定分支后会自动部署。
+- Do not commit `.env` to GitHub.
+- For public deployments, always set `FREEBUFF_API_KEY` and `FREEBUFF_ADMIN_KEY`.
+- Vercel's free plan has Serverless Function execution time limits. Long streaming requests may be affected by platform limitations.
+- Changing Vercel environment variables requires manual `Redeploy`; pushing code changes to the linked branch triggers automatic deployment.
 
-## 感谢
+## Thanks
 
-> 本项目基于 [XxxXTeam/freebuff2api](https://github.com/XxxXTeam/freebuff2api) 修改。
+> This project is based on [XxxXTeam/freebuff2api](https://github.com/XxxXTeam/freebuff2api).
 
 > [FreeBuff](https://freebuff.com)

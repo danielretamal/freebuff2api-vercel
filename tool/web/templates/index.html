@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Token 获取器 ✨</title>
+    <title>Token Getter ✨</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -21,14 +21,14 @@
     <main class="container">
         <header class="site-header">
             <div class="header-icon">🔑</div>
-            <h1>Token 获取器</h1>
-            <p class="subtitle">让认证这件事变得可爱一点 ~</p>
+            <h1>Token Getter</h1>
+            <p class="subtitle">Making authentication a little cuter ~</p>
         </header>
 
         <section class="card main-card">
-            <!-- 模式选择 -->
+            <!-- Mode Selection -->
             <div class="control-group mode-group">
-                <label class="control-label">选择平台</label>
+                <label class="control-label">Select Platform</label>
                 <div class="mode-toggle" id="modeToggle">
                     <button class="mode-btn active" data-mode="freebuff">
                         <span class="btn-emoji">🌸</span>
@@ -41,68 +41,68 @@
                 </div>
             </div>
 
-            <!-- 开始按钮 -->
+            <!-- Start Button -->
             <button id="startBtn" class="action-btn primary-btn">
                 <span class="btn-glow"></span>
                 <span class="btn-content">
                     <span class="btn-icon">✨</span>
-                    <span class="btn-text">开始认证</span>
+                    <span class="btn-text">Start Auth</span>
                 </span>
             </button>
 
-            <!-- 登录区域 -->
+            <!-- Login Area -->
             <div id="loginArea" class="area login-area hidden">
                 <div class="area-icon">🌸</div>
-                <p class="area-title">请在浏览器里完成登录</p>
+                <p class="area-title">Please complete login in your browser</p>
                 <a id="loginLink" href="#" target="_blank" class="login-link">
-                    <span>去登录 →</span>
+                    <span>Go login →</span>
                 </a>
-                <p class="area-hint">点完记得回来哦，我会在这里等着 ~</p>
+                <p class="area-hint">Come back after you're done, I'll be waiting ~</p>
             </div>
 
-            <!-- 状态区域 -->
+            <!-- Status Area -->
             <div id="statusArea" class="area status-area hidden">
                 <div class="spinner-box">
                     <div class="spinner">🌀</div>
                 </div>
-                <p id="statusText" class="status-text">正在等待大人登录...</p>
-                <p id="statusSub" class="status-sub">第 1 次尝试</p>
+                <p id="statusText" class="status-text">Waiting for you to log in...</p>
+                <p id="statusSub" class="status-sub">Attempt 1</p>
             </div>
 
-            <!-- 结果区域 -->
+            <!-- Result Area -->
             <div id="resultArea" class="area result-area hidden">
                 <div class="result-badge">🎉</div>
-                <h2 class="result-title">拿到 token 啦！</h2>
+                <h2 class="result-title">Got the token!</h2>
                 
                 <div class="user-card">
                     <div class="user-avatar" id="userAvatar">🧸</div>
                     <div class="user-details">
-                        <p class="user-name"><span class="label">名字</span><span id="userName" class="value">-</span></p>
-                        <p class="user-email"><span class="label">邮箱</span><span id="userEmail" class="value">-</span></p>
-                        <p class="user-id"><span class="label">账号</span><span id="userId" class="value">-</span></p>
-                        <p class="user-mode"><span class="label">平台</span><span id="userMode" class="value">-</span></p>
+                        <p class="user-name"><span class="label">Name</span><span id="userName" class="value">-</span></p>
+                        <p class="user-email"><span class="label">Email</span><span id="userEmail" class="value">-</span></p>
+                        <p class="user-id"><span class="label">Account</span><span id="userId" class="value">-</span></p>
+                        <p class="user-mode"><span class="label">Platform</span><span id="userMode" class="value">-</span></p>
                     </div>
                 </div>
 
                 <div class="token-section">
-                    <label class="token-label">你的 Token</label>
+                    <label class="token-label">Your Token</label>
                     <div class="token-input-group">
                         <code id="tokenDisplay" class="token-display">***</code>
-                        <button id="copyBtn" class="icon-btn" title="抄走">
+                        <button id="copyBtn" class="icon-btn" title="Copy">
                             <span>📋</span>
                         </button>
                     </div>
-                    <p id="copyTip" class="copy-tip hidden">已复制到剪贴板 ~</p>
+                    <p id="copyTip" class="copy-tip hidden">Copied to clipboard ~</p>
                 </div>
 
                 <div class="result-actions">
                     <button id="verifyBtn" class="action-btn secondary-btn">
                         <span class="btn-icon">🔍</span>
-                        <span>验一下</span>
+                        <span>Verify</span>
                     </button>
                     <button id="copyEnvBtn" class="action-btn primary-btn small">
                         <span class="btn-icon">💾</span>
-                        <span>复制环境变量</span>
+                        <span>Copy Env Variable</span>
                     </button>
                 </div>
                 <p id="actionTip" class="action-tip"></p>
@@ -121,7 +121,7 @@
         let eventSource = null;
         let currentToken = '';
 
-        // 模式切换
+        // Mode switch
         modeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 modeBtns.forEach(b => b.classList.remove('active'));
@@ -130,14 +130,14 @@
             });
         });
 
-        // 隐藏所有区域
+        // Hide all areas
         function hideAreas() {
             $('loginArea').classList.add('hidden');
             $('statusArea').classList.add('hidden');
             $('resultArea').classList.add('hidden');
         }
 
-        // 开始认证
+        // Start auth
         $('startBtn').addEventListener('click', async () => {
             hideAreas();
             $('startBtn').disabled = true;
@@ -157,13 +157,13 @@
                 $('loginArea').classList.remove('hidden');
                 $('statusArea').classList.remove('hidden');
 
-                // 打开链接
+                // Open login URL
                 window.open(data.login_url, '_blank');
 
-                // SSE 轮询
+                // SSE polling
                 startPolling(data.fingerprint_id);
             } catch (e) {
-                alert('出错了：' + e.message);
+                alert('Error: ' + e.message);
                 $('startBtn').disabled = false;
                 $('startBtn').classList.remove('loading');
             }
@@ -179,21 +179,21 @@
                 
                 if (data.event === 'pending') {
                     attempt = data.attempt;
-                    $('statusText').textContent = '正在等待大人登录...';
-                    $('statusSub').textContent = `第 ${attempt} 次尝试`;
+                    $('statusText').textContent = 'Waiting for you to log in...';
+                    $('statusSub').textContent = `Attempt ${attempt}`;
                 } else if (data.event === 'success') {
                     eventSource.close();
                     showResult(data.user, currentMode);
                 } else if (data.event === 'timeout') {
                     eventSource.close();
-                    $('statusText').textContent = '等太久了，超时了 QAQ';
-                    $('statusSub').textContent = '请重新点开始认证';
+                    $('statusText').textContent = 'Waited too long, timed out QAQ';
+                    $('statusSub').textContent = 'Please click Start Auth again';
                     $('startBtn').disabled = false;
                     $('startBtn').classList.remove('loading');
                 } else if (data.event === 'error') {
                     eventSource.close();
-                    $('statusText').textContent = '出错了：' + (data.message || '未知错误');
-                    $('statusSub').textContent = '请重新尝试';
+                    $('statusText').textContent = 'Error: ' + (data.message || 'Unknown error');
+                    $('statusSub').textContent = 'Please try again';
                     $('startBtn').disabled = false;
                     $('startBtn').classList.remove('loading');
                 }
@@ -211,19 +211,19 @@
             $('resultArea').classList.remove('hidden');
 
             currentToken = user.authToken || '';
-            $('userName').textContent = user.name || '匿名';
-            $('userEmail').textContent = user.email || '无';
-            $('userId').textContent = user.id || user.userId || user.sub || '无';
+            $('userName').textContent = user.name || 'Anonymous';
+            $('userEmail').textContent = user.email || 'None';
+            $('userId').textContent = user.id || user.userId || user.sub || 'None';
             $('userMode').textContent = mode === 'codebuff' ? 'Codebuff' : 'Freebuff';
-            $('tokenDisplay').textContent = currentToken || '未返回 token';
+            $('tokenDisplay').textContent = currentToken || 'No token returned';
             
-            // 根据名字选个头像
+            // Pick an avatar based on name
             const avatars = ['🧸', '🐱', '🐰', '🦊', '🐼', '🐨', '🐯', '🐹'];
             const idx = (user.name || '').length % avatars.length;
             $('userAvatar').textContent = avatars[idx];
         }
 
-        // 复制 token
+        // Copy token
         $('copyBtn').addEventListener('click', async () => {
             try {
                 await navigator.clipboard.writeText(currentToken);
@@ -242,7 +242,7 @@
             }
         });
 
-        // 验证 token
+        // Verify token
         $('verifyBtn').addEventListener('click', async () => {
             $('verifyBtn').disabled = true;
             try {
@@ -252,25 +252,25 @@
                     body: JSON.stringify({ token: currentToken })
                 });
                 const data = await resp.json();
-                $('actionTip').textContent = data.ok ? `验证通过 ~ ${data.info}` : `验证失败：${data.info}`;
+                $('actionTip').textContent = data.ok ? `Verified ~ ${data.info}` : `Verification failed: ${data.info}`;
                 $('actionTip').className = 'action-tip ' + (data.ok ? 'tip-ok' : 'tip-err');
             } catch (e) {
-                $('actionTip').textContent = '验证请求出错：' + e.message;
+                $('actionTip').textContent = 'Verification request failed: ' + e.message;
                 $('actionTip').className = 'action-tip tip-err';
             }
             $('verifyBtn').disabled = false;
         });
 
-        // 复制环境变量文本
+        // Copy env variable
         $('copyEnvBtn').addEventListener('click', async () => {
             const envLine = `FREEBUFF_TOKEN=${currentToken}`;
             $('copyEnvBtn').disabled = true;
             try {
                 await navigator.clipboard.writeText(envLine);
-                $('actionTip').textContent = '已复制 FREEBUFF_TOKEN';
+                $('actionTip').textContent = 'FREEBUFF_TOKEN copied';
                 $('actionTip').className = 'action-tip tip-ok';
             } catch (e) {
-                $('actionTip').textContent = '复制出错：' + e.message;
+                $('actionTip').textContent = 'Copy error: ' + e.message;
                 $('actionTip').className = 'action-tip tip-err';
             }
             $('copyEnvBtn').disabled = false;

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -264,8 +264,8 @@
           <section class="login-brief">
             <div><div class="brand-mark">FB</div></div>
             <div>
-              <h1 class="login-title">正在检查登录状态</h1>
-              <p class="login-subtitle">如果已有管理会话，会直接进入控制台；否则会显示登录页。</p>
+              <h1 class="login-title">Checking login status</h1>
+              <p class="login-subtitle">If you have an existing admin session, you will enter the console directly; otherwise, the login page will be shown.</p>
             </div>
             <p class="muted mono">/admin</p>
           </section>
@@ -283,21 +283,21 @@
               <div class="brand-mark">FB</div>
             </div>
             <div>
-              <h1 class="login-title">freebuff2api 管理面板</h1>
-              <p class="login-subtitle">管理 Freebuff Token、查看运行日志、检查账号池状态，并在本地服务中立即应用配置。</p>
+              <h1 class="login-title">freebuff2api Admin Panel</h1>
+              <p class="login-subtitle">Manage Freebuff tokens, view runtime logs, check account pool status, and apply configuration changes immediately.</p>
             </div>
             <p class="muted mono">/admin</p>
           </section>
           <section class="login-card">
             <div class="login-panel">
-              <n-card title="管理员登录" :bordered="false">
+              <n-card title="Admin Login" :bordered="false">
                 <n-form @submit.prevent="login">
                   <n-form-item label="Admin Key">
-                    <n-input v-model:value="loginKey" type="password" show-password-on="click" placeholder="默认 sk-admin" @keydown.enter="login" />
+                    <n-input v-model:value="loginKey" type="password" show-password-on="click" placeholder="default: sk-admin" @keydown.enter="login" />
                   </n-form-item>
-                  <n-button type="primary" block :loading="loading.login" @click="login">登录</n-button>
+                  <n-button type="primary" block :loading="loading.login" @click="login">Login</n-button>
                 </n-form>
-                <p class="muted" style="margin: 14px 0 0; font-size: 12px; line-height: 1.7;">默认管理员 Key 是 sk-admin，进入后请在设置页改成自己的密钥。</p>
+                <p class="muted" style="margin: 14px 0 0; font-size: 12px; line-height: 1.7;">The default admin key is <code>sk-admin</code>. Change it in the Settings page after logging in.</p>
               </n-card>
             </div>
           </section>
@@ -318,8 +318,8 @@
               </button>
             </nav>
             <div class="sidebar-foot">
-              <div>环境：{{ config.environment || '-' }}</div>
-              <div>上游：{{ overview.base_url || '-' }}</div>
+              <div>Environment: {{ config.environment || '-' }}</div>
+              <div>Upstream: {{ overview.base_url || '-' }}</div>
             </div>
           </aside>
 
@@ -331,33 +331,33 @@
               </div>
               <div class="top-actions">
                 <n-tag :type="overview.status === 'ok' ? 'success' : 'warning'">{{ overview.status || 'unknown' }}</n-tag>
-                <n-button secondary @click="refreshAll" :loading="loading.page">刷新</n-button>
-                <n-button tertiary @click="logout">退出</n-button>
+                <n-button secondary @click="refreshAll" :loading="loading.page">Refresh</n-button>
+                <n-button tertiary @click="logout">Logout</n-button>
               </div>
             </header>
 
             <section v-if="tab === 'overview'">
-              <n-alert v-if="config.using_default_admin_key || !config.api_key_configured || !config.token_count" type="warning" title="初始化未完成" style="margin-bottom: 16px;">
-                <div v-if="config.using_default_admin_key">当前仍在使用默认 Admin Key：sk-admin，请到设置页修改。</div>
-                <div v-if="!config.api_key_configured">FREEBUFF_API_KEY 未配置，/v1/* API 会暂时返回配置错误。</div>
-                <div v-if="!config.token_count">FREEBUFF_TOKEN 未配置，请到 Token 页添加后热更新生效。</div>
+              <n-alert v-if="config.using_default_admin_key || !config.api_key_configured || !config.token_count" type="warning" title="Initialization incomplete" style="margin-bottom: 16px;">
+                <div v-if="config.using_default_admin_key">Still using the default Admin Key: sk-admin. Please change it in Settings.</div>
+                <div v-if="!config.api_key_configured">FREEBUFF_API_KEY is not configured. The /v1/* API will return configuration errors.</div>
+                <div v-if="!config.token_count">FREEBUFF_TOKEN is not configured. Add it in the Token page to hot-reload.</div>
               </n-alert>
               <div class="metric-grid">
-                <div class="metric"><div class="metric-label">账号池</div><div class="metric-value">{{ overview.account_count ?? '-' }}</div><div class="metric-note">Freebuff Token 数量</div></div>
-                <div class="metric"><div class="metric-label">模型</div><div class="metric-value">{{ overview.model_count ?? '-' }}</div><div class="metric-note">OpenAI 兼容模型</div></div>
-                <div class="metric"><div class="metric-label">日志等级</div><div class="metric-value">{{ overview.log_level || '-' }}</div><div class="metric-note">Debug: {{ overview.debug ? 'on' : 'off' }}</div></div>
-                <div class="metric"><div class="metric-label">部署环境</div><div class="metric-value">{{ config.environment || '-' }}</div><div class="metric-note">Vercel 写入不持久</div></div>
+                <div class="metric"><div class="metric-label">Account Pool</div><div class="metric-value">{{ overview.account_count ?? '-' }}</div><div class="metric-note">Freebuff Tokens</div></div>
+                <div class="metric"><div class="metric-label">Models</div><div class="metric-value">{{ overview.model_count ?? '-' }}</div><div class="metric-note">OpenAI-compatible models</div></div>
+                <div class="metric"><div class="metric-label">Log Level</div><div class="metric-value">{{ overview.log_level || '-' }}</div><div class="metric-note">Debug: {{ overview.debug ? 'on' : 'off' }}</div></div>
+                <div class="metric"><div class="metric-label">Deployment</div><div class="metric-value">{{ config.environment || '-' }}</div><div class="metric-note">Vercel writes are not persistent</div></div>
               </div>
               <div class="panel-grid">
-                <n-card title="当前配置" :bordered="true">
+                <n-card title="Current Configuration" :bordered="true">
                   <n-descriptions label-placement="left" :column="1" size="small" bordered>
-                    <n-descriptions-item label="API Key">{{ config.api_key_configured ? config.api_key_masked : '未设置' }}</n-descriptions-item>
-                    <n-descriptions-item label="Admin Key">{{ config.admin_key_configured ? config.admin_key_masked : '未设置' }}{{ config.using_default_admin_key ? '（默认）' : '' }}</n-descriptions-item>
-                    <n-descriptions-item label="代理">{{ config.proxy_enabled ? config.proxy_url : '关闭' }}</n-descriptions-item>
+                    <n-descriptions-item label="API Key">{{ config.api_key_configured ? config.api_key_masked : 'Not set' }}</n-descriptions-item>
+                    <n-descriptions-item label="Admin Key">{{ config.admin_key_configured ? config.admin_key_masked : 'Not set' }}{{ config.using_default_admin_key ? ' (default)' : '' }}</n-descriptions-item>
+                    <n-descriptions-item label="Proxy">{{ config.proxy_enabled ? config.proxy_url : 'Disabled' }}</n-descriptions-item>
                     <n-descriptions-item label="Base URL">{{ config.base_url }}</n-descriptions-item>
                   </n-descriptions>
                 </n-card>
-                <n-card title="Token 摘要" :bordered="true">
+                <n-card title="Token Summary" :bordered="true">
                   <div v-if="config.tokens && config.tokens.length" class="token-list">
                     <div v-for="token in config.tokens" :key="token.index" class="token-row">
                       <n-tag size="small">#{{ token.index }}</n-tag>
@@ -365,7 +365,7 @@
                       <span class="muted">{{ token.length }} chars</span>
                     </div>
                   </div>
-                  <div v-else class="empty-box">还没有配置 Freebuff Token</div>
+                  <div v-else class="empty-box">No Freebuff Tokens configured yet</div>
                 </n-card>
               </div>
             </section>
@@ -373,8 +373,8 @@
             <section v-if="tab === 'tokens'" class="panel-grid">
               <n-card :bordered="true">
                 <div class="section-head">
-                  <h3>Freebuff Token 列表</h3>
-                  <n-button type="primary" @click="openTokenModal('add')">添加 Token</n-button>
+                  <h3>Freebuff Token List</h3>
+                  <n-button type="primary" @click="openTokenModal('add')">Add Token</n-button>
                 </div>
                 <div v-if="config.tokens && config.tokens.length" class="token-list">
                   <div v-for="token in config.tokens" :key="token.index" class="token-row">
@@ -382,97 +382,97 @@
                     <span class="mono">{{ token.masked }}</span>
                     <span class="muted">{{ token.length }} chars</span>
                     <span class="token-actions">
-                      <n-button size="small" secondary :loading="loading.tokenRead === token.index" @click="openTokenModal('edit', token.index)">修改</n-button>
-                      <n-button size="small" secondary :loading="loading.verify === token.index" @click="verifySavedToken(token.index)">验证</n-button>
+                      <n-button size="small" secondary :loading="loading.tokenRead === token.index" @click="openTokenModal('edit', token.index)">Edit</n-button>
+                      <n-button size="small" secondary :loading="loading.verify === token.index" @click="verifySavedToken(token.index)">Verify</n-button>
                       <n-popconfirm @positive-click="deleteToken(token.index)">
                         <template #trigger>
-                          <n-button size="small" tertiary type="error" :loading="loading.tokenDelete === token.index">删除</n-button>
+                          <n-button size="small" tertiary type="error" :loading="loading.tokenDelete === token.index">Delete</n-button>
                         </template>
-                        删除这个 Freebuff Token？
+                        Delete this Freebuff Token?
                       </n-popconfirm>
                     </span>
                   </div>
                 </div>
-                <div v-else class="empty-box">还没有配置 Freebuff Token，点击右上角添加。</div>
-                <n-alert v-if="lastEnv" style="margin-top: 16px;" type="info" title="环境变量文本">
+                <div v-else class="empty-box">No Freebuff Tokens configured yet. Click Add Token above.</div>
+                <n-alert v-if="lastEnv" style="margin-top: 16px;" type="info" title="Environment Variable Text">
                   <div class="env-box">{{ lastEnv }}</div>
                 </n-alert>
               </n-card>
-              <n-card title="显示规则" :bordered="true">
-                <p class="muted">列表默认只显示脱敏 token，不展示完整值。</p>
-                <p class="muted">点击“修改”时才会读取完整 token 并显示在弹窗输入框中。</p>
-                <p class="muted">本地或常驻服务器保存后会写入 .env 并立即替换账号池；Vercel 只返回环境变量文本。</p>
+              <n-card title="Display Rules" :bordered="true">
+                <p class="muted">Tokens are masked by default. The full value is never shown in the list.</p>
+                <p class="muted">Click "Edit" to reveal the full token in the input dialog.</p>
+                <p class="muted">On local/persistent servers, saving writes to .env and replaces the account pool immediately. On Vercel, only the environment variable text is returned.</p>
               </n-card>
             </section>
 
             <section v-if="tab === 'apiKey'" class="panel-grid">
               <n-card title="API Key" :bordered="true">
                 <n-alert type="default" style="margin-bottom: 16px;">
-                  当前 API Key：{{ config.api_key_configured ? config.api_key_masked : '未设置' }}
+                  Current API Key: {{ config.api_key_configured ? config.api_key_masked : 'Not set' }}
                 </n-alert>
                 <n-form>
-                  <n-form-item label="新的 API Key">
-                    <n-input v-model:value="apiKeyForm.api_key" type="password" show-password-on="click" placeholder="用于 /v1/* 接口的 Authorization Bearer key" />
+                  <n-form-item label="New API Key">
+                    <n-input v-model:value="apiKeyForm.api_key" type="password" show-password-on="click" placeholder="Authorization Bearer key for /v1/* endpoints" />
                   </n-form-item>
-                  <n-button type="primary" :loading="loading.apiKey" @click="saveApiKey">保存 API Key</n-button>
+                  <n-button type="primary" :loading="loading.apiKey" @click="saveApiKey">Save API Key</n-button>
                 </n-form>
               </n-card>
-              <n-card title="调用方式" :bordered="true">
+              <n-card title="Usage" :bordered="true">
                 <div class="env-box">Authorization: Bearer {{ apiKeyForm.api_key || config.api_key_masked || 'your-api-key' }}</div>
-                <p class="muted">API Key 和管理员 Key 分开管理。API Key 用于外部客户端调用模型接口。</p>
+                <p class="muted">The API Key and Admin Key are separate. The API Key is used by external clients to call model endpoints.</p>
               </n-card>
             </section>
 
             <section v-if="tab === 'env'" class="panel-grid">
-              <n-card title="Env 配置" :bordered="true">
+              <n-card title="Env Configuration" :bordered="true">
                 <n-alert :type="envInfo.environment === 'vercel' ? 'warning' : 'info'" style="margin-bottom: 16px;">
-                  {{ envInfo.message || '正在读取环境配置' }}
+                  {{ envInfo.message || 'Reading environment configuration...' }}
                 </n-alert>
                 <n-descriptions label-placement="left" :column="1" size="small" bordered style="margin-bottom: 16px;">
-                  <n-descriptions-item label="环境">{{ envInfo.environment || '-' }}</n-descriptions-item>
-                  <n-descriptions-item label="路径">{{ envInfo.path || '-' }}</n-descriptions-item>
-                  <n-descriptions-item label="文件状态">{{ envInfo.exists ? '存在' : '未找到' }}</n-descriptions-item>
+                  <n-descriptions-item label="Environment">{{ envInfo.environment || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="Path">{{ envInfo.path || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="File Status">{{ envInfo.exists ? 'Exists' : 'Not found' }}</n-descriptions-item>
                 </n-descriptions>
-                <pre class="env-box">{{ envInfo.content || (envInfo.environment === 'vercel' ? '请在 Vercel Environment Variables 中查看和修改变量。' : '当前没有 .env 内容。') }}</pre>
+                <pre class="env-box">{{ envInfo.content || (envInfo.environment === 'vercel' ? 'View and edit variables in Vercel Environment Variables.' : 'No .env content available.') }}</pre>
                 <n-space style="margin-top: 14px;">
-                  <n-button type="primary" secondary :loading="loading.env" @click="loadEnv(true)">刷新 Env</n-button>
-                  <n-button secondary :disabled="!envInfo.content" @click="copyEnvContent">复制内容</n-button>
+                  <n-button type="primary" secondary :loading="loading.env" @click="loadEnv(true)">Refresh Env</n-button>
+                  <n-button secondary :disabled="!envInfo.content" @click="copyEnvContent">Copy Content</n-button>
                 </n-space>
               </n-card>
-              <n-card title="Vercel 修改方式" :bordered="true">
-                <p class="muted">进入 Vercel 项目页面，打开 Settings -> Environment Variables。</p>
-                <p class="muted">修改 `FREEBUFF_TOKEN`、`FREEBUFF_API_KEY`、`FREEBUFF_ADMIN_KEY` 等变量后，需要重新部署。</p>
-                <p class="muted">本地 `.env` 不会上传到 GitHub，也不会被 Vercel 自动读取。</p>
+              <n-card title="Vercel Modification Guide" :bordered="true">
+                <p class="muted">Go to your Vercel project page, open Settings -> Environment Variables.</p>
+                <p class="muted">Modify variables like `FREEBUFF_TOKEN`, `FREEBUFF_API_KEY`, `FREEBUFF_ADMIN_KEY`, then redeploy.</p>
+                <p class="muted">The local `.env` file is not uploaded to GitHub and is not automatically read by Vercel.</p>
               </n-card>
             </section>
 
             <section v-if="tab === 'network'" class="panel-grid">
-              <n-card title="服务器网络环境" :bordered="true">
+              <n-card title="Server Network Environment" :bordered="true">
                 <n-space style="margin-bottom: 14px;">
-                  <n-button type="primary" secondary :loading="loading.network" @click="loadNetwork(true)">重新检测</n-button>
-                  <n-tag :type="networkInfo.region && networkInfo.region.ok ? 'success' : 'warning'">{{ networkInfo.region && networkInfo.region.ok ? '定位成功' : '定位失败' }}</n-tag>
+                  <n-button type="primary" secondary :loading="loading.network" @click="loadNetwork(true)">Re-detect</n-button>
+                  <n-tag :type="networkInfo.region && networkInfo.region.ok ? 'success' : 'warning'">{{ networkInfo.region && networkInfo.region.ok ? 'Geo-located' : 'Geo-location failed' }}</n-tag>
                 </n-space>
                 <n-descriptions label-placement="left" :column="1" size="small" bordered>
-                  <n-descriptions-item label="服务器公网 IP">{{ networkInfo.region && networkInfo.region.ip || '-' }}</n-descriptions-item>
-                  <n-descriptions-item label="国家/地区">{{ networkInfo.region && networkInfo.region.country || '-' }}</n-descriptions-item>
-                  <n-descriptions-item label="省市">{{ [networkInfo.region && networkInfo.region.region, networkInfo.region && networkInfo.region.city].filter(Boolean).join(' / ') || '-' }}</n-descriptions-item>
-                  <n-descriptions-item label="时区">{{ networkInfo.region && networkInfo.region.timezone || '-' }}</n-descriptions-item>
-                  <n-descriptions-item label="运营商">{{ networkInfo.region && networkInfo.region.org || '-' }}</n-descriptions-item>
-                  <n-descriptions-item label="来源">{{ networkInfo.region && networkInfo.region.source || '-' }} {{ networkInfo.region && networkInfo.region.latency_ms ? `(${networkInfo.region.latency_ms}ms)` : '' }}</n-descriptions-item>
+                  <n-descriptions-item label="Server Public IP">{{ networkInfo.region && networkInfo.region.ip || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="Country / Region">{{ networkInfo.region && networkInfo.region.country || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="State / City">{{ [networkInfo.region && networkInfo.region.region, networkInfo.region && networkInfo.region.city].filter(Boolean).join(' / ') || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="Timezone">{{ networkInfo.region && networkInfo.region.timezone || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="ISP">{{ networkInfo.region && networkInfo.region.org || '-' }}</n-descriptions-item>
+                  <n-descriptions-item label="Source">{{ networkInfo.region && networkInfo.region.source || '-' }} {{ networkInfo.region && networkInfo.region.latency_ms ? `(${networkInfo.region.latency_ms}ms)` : '' }}</n-descriptions-item>
                 </n-descriptions>
               </n-card>
-              <n-card title="连通性" :bordered="true">
+              <n-card title="Connectivity" :bordered="true">
                 <div v-if="networkInfo.connectivity && networkInfo.connectivity.length" class="token-list">
                   <div v-for="item in networkInfo.connectivity" :key="item.name" class="token-row" style="grid-template-columns: 90px 1fr 90px 1fr;">
                     <n-tag size="small" :type="item.ok ? 'success' : 'error'">{{ item.name }}</n-tag>
-                    <span>{{ item.ok ? '可访问' : '失败' }}</span>
+                    <span>{{ item.ok ? 'Accessible' : 'Failed' }}</span>
                     <span class="muted">{{ item.status || '-' }}</span>
                     <span class="muted">{{ item.latency_ms ? `${item.latency_ms}ms` : (item.error || '-') }}</span>
                   </div>
                 </div>
-                <div v-else class="empty-box">尚未检测网络连通性</div>
+                <div v-else class="empty-box">Connectivity not yet checked</div>
                 <n-alert style="margin-top: 16px;" type="default">
-                  代理：{{ networkInfo.proxy_enabled ? networkInfo.proxy_url || '已开启' : '未开启' }}
+                  Proxy: {{ networkInfo.proxy_enabled ? networkInfo.proxy_url || 'Enabled' : 'Disabled' }}
                 </n-alert>
               </n-card>
             </section>
@@ -482,15 +482,15 @@
                 <n-select v-model:value="logLevel" :options="logLevels" style="width: 160px" />
                 <n-input-number v-model:value="logLimit" :min="50" :max="1000" :step="50" style="width: 140px" />
                 <n-switch v-model:value="logAutoRefresh" @update:value="syncLogAutoRefresh">
-                  <template #checked>自动刷新</template>
-                  <template #unchecked>手动刷新</template>
+                  <template #checked>Auto refresh</template>
+                  <template #unchecked>Manual refresh</template>
                 </n-switch>
-                <span class="muted">{{ logAutoRefresh ? `每 ${logRefreshSeconds} 秒刷新` : '自动刷新已关闭' }}</span>
-                <n-button type="primary" secondary :loading="loading.logs" @click="loadLogs(false)">刷新日志</n-button>
-                <n-button secondary @click="copyLogs">复制当前日志</n-button>
+                <span class="muted">{{ logAutoRefresh ? `Every ${logRefreshSeconds}s` : 'Auto refresh off' }}</span>
+                <n-button type="primary" secondary :loading="loading.logs" @click="loadLogs(false)">Refresh Logs</n-button>
+                <n-button secondary @click="copyLogs">Copy Logs</n-button>
               </div>
               <div class="log-view">
-                <div v-if="!logs.length" class="muted">暂无日志</div>
+                <div v-if="!logs.length" class="muted">No logs</div>
                 <div v-for="line in logs" :key="line.id" class="log-line">
                   <span>{{ line.time }}</span>
                   <span :class="'log-level-' + line.level">{{ line.level }}</span>
@@ -502,52 +502,52 @@
             </section>
 
             <section v-if="tab === 'test'" class="panel-grid">
-              <n-card title="模型调用" :bordered="true">
+              <n-card title="Model Test" :bordered="true">
                 <n-form>
-                  <n-form-item label="模型 ID">
-                    <n-select v-model:value="testForm.model" :options="modelOptions" :loading="loading.models" filterable placeholder="从 /v1/models 获取模型" />
+                  <n-form-item label="Model ID">
+                    <n-select v-model:value="testForm.model" :options="modelOptions" :loading="loading.models" filterable placeholder="Select model from /v1/models" />
                   </n-form-item>
                   <n-form-item label="Prompt">
                     <n-input v-model:value="testForm.prompt" type="textarea" :autosize="{ minRows: 4, maxRows: 8 }" />
                   </n-form-item>
                   <n-space>
-                    <n-button type="primary" :loading="loading.test" @click="runChatTest">发送请求</n-button>
-                    <n-button secondary :loading="loading.models" @click="loadModels">刷新模型</n-button>
+                    <n-button type="primary" :loading="loading.test" @click="runChatTest">Send Request</n-button>
+                    <n-button secondary :loading="loading.models" @click="loadModels">Refresh Models</n-button>
                   </n-space>
                 </n-form>
               </n-card>
-              <n-card title="调用结果" :bordered="true">
-                <pre class="env-box">{{ testResult || '尚未发送请求' }}</pre>
+              <n-card title="Result" :bordered="true">
+                <pre class="env-box">{{ testResult || 'No request sent yet' }}</pre>
               </n-card>
             </section>
 
             <section v-if="tab === 'settings'" class="panel-grid">
-              <n-card title="管理员 Key" :bordered="true">
+              <n-card title="Admin Key" :bordered="true">
                 <n-form>
-                  <n-form-item label="新的 Admin Key">
-                    <n-input v-model:value="security.admin_key" type="password" show-password-on="click" placeholder="至少 8 位，保存后需要重新登录" />
+                  <n-form-item label="New Admin Key">
+                    <n-input v-model:value="security.admin_key" type="password" show-password-on="click" placeholder="At least 8 characters. You will need to re-login after saving." />
                   </n-form-item>
-                  <n-button type="primary" :loading="loading.security" @click="saveSecurity">保存管理员 Key</n-button>
+                  <n-button type="primary" :loading="loading.security" @click="saveSecurity">Save Admin Key</n-button>
                 </n-form>
               </n-card>
-              <n-card title="GitHub 发布提示" :bordered="true">
-                <p class="muted">确认 .env 不提交到仓库；README 中只放变量名和示例，不放真实 token。</p>
-                <p class="muted">公开部署时必须设置 FREEBUFF_ADMIN_KEY 和 FREEBUFF_API_KEY。</p>
+              <n-card title="GitHub Publishing Notes" :bordered="true">
+                <p class="muted">Make sure .env is not committed to the repository. Only include variable names and examples in the README — never real tokens.</p>
+                <p class="muted">Always set FREEBUFF_ADMIN_KEY and FREEBUFF_API_KEY for public deployments.</p>
               </n-card>
             </section>
 
-            <n-modal v-model:show="tokenModal.show" preset="card" :title="tokenModal.mode === 'add' ? '添加 Freebuff Token' : '修改 Freebuff Token'" style="width: min(640px, 92vw)">
+            <n-modal v-model:show="tokenModal.show" preset="card" :title="tokenModal.mode === 'add' ? 'Add Freebuff Token' : 'Edit Freebuff Token'" style="width: min(640px, 92vw)">
               <n-alert v-if="tokenModal.mode === 'add'" type="info" style="margin-bottom: 16px;">
-                已打开 Token 获取页面。完成认证后复制 token，回到这里粘贴并保存。也可以手动打开：
+                Token retrieval page opened. After authentication, copy the token and paste it here to save. You can also open manually:
                 <a :href="tokenHelpUrl" target="_blank" rel="noopener">{{ tokenHelpUrl }}</a>
               </n-alert>
               <n-form>
-                <n-form-item label="完整 Token">
-                  <n-input v-model:value="tokenModal.token" type="textarea" :autosize="{ minRows: 4, maxRows: 8 }" placeholder="粘贴完整 Freebuff Token" />
+                <n-form-item label="Full Token">
+                  <n-input v-model:value="tokenModal.token" type="textarea" :autosize="{ minRows: 4, maxRows: 8 }" placeholder="Paste the full Freebuff Token" />
                 </n-form-item>
                 <n-space>
-                  <n-button type="primary" :loading="loading.tokens" @click="saveTokenModal">保存并生效</n-button>
-                  <n-button secondary :disabled="!tokenModal.token" :loading="loading.verify === 0" @click="verifyTokenValue(tokenModal.token)">验证当前输入</n-button>
+                  <n-button type="primary" :loading="loading.tokens" @click="saveTokenModal">Save & Apply</n-button>
+                  <n-button secondary :disabled="!tokenModal.token" :loading="loading.verify === 0" @click="verifyTokenValue(tokenModal.token)">Verify Input</n-button>
                 </n-space>
               </n-form>
             </n-modal>
@@ -560,7 +560,7 @@
     const { createApp, ref, reactive, computed, onMounted, onUnmounted, watch } = Vue;
 
     function normalizeError(error) {
-      return error && error.message ? error.message : String(error || '请求失败');
+      return error && error.message ? error.message : String(error || 'Request failed');
     }
 
     async function api(path, options = {}) {
@@ -598,7 +598,7 @@
         const lastEnv = ref('');
         const testResult = ref('');
         const modelOptions = ref([]);
-        const testForm = reactive({ model: '', prompt: '请用一句话回复当前服务状态。' });
+        const testForm = reactive({ model: '', prompt: 'Please describe the current service status in one sentence.' });
         const tokenHelpUrl = 'https://freebuff.071129.xyz/';
         const tokenModal = reactive({ show: false, mode: 'add', index: null, token: '' });
         const apiKeyForm = reactive({ api_key: '' });
@@ -620,14 +620,14 @@
         });
 
         const nav = [
-          { key: 'overview', label: '概览', subtitle: '服务状态、账号池和当前配置' },
-          { key: 'tokens', label: 'Token', subtitle: '新增、验证并立即应用 Freebuff Token' },
-          { key: 'apiKey', label: 'API Key', subtitle: '单独管理外部调用接口使用的访问密钥' },
-          { key: 'env', label: 'Env', subtitle: '查看本地 .env 内容和部署环境提示' },
-          { key: 'network', label: '网络', subtitle: '检测当前服务器公网地区、代理和上游连通性' },
-          { key: 'logs', label: '日志', subtitle: '查看当前实例内存中的运行日志' },
-          { key: 'test', label: '测试', subtitle: '快速发起一次模型调用' },
-          { key: 'settings', label: '设置', subtitle: '修改后台管理员 Key' }
+          { key: 'overview', label: 'Overview', subtitle: 'Service status, account pool and configuration' },
+          { key: 'tokens', label: 'Token', subtitle: 'Add, verify and apply Freebuff Tokens' },
+          { key: 'apiKey', label: 'API Key', subtitle: 'Manage the API access key separately' },
+          { key: 'env', label: 'Env', subtitle: 'View local .env content and deployment info' },
+          { key: 'network', label: 'Network', subtitle: 'Detect server region, proxy and upstream connectivity' },
+          { key: 'logs', label: 'Logs', subtitle: 'View in-memory runtime logs' },
+          { key: 'test', label: 'Test', subtitle: 'Quick model invocation test' },
+          { key: 'settings', label: 'Settings', subtitle: 'Change the admin backend key' }
         ];
         if (!nav.some(item => item.key === tab.value)) tab.value = 'overview';
         watch(tab, value => {
@@ -638,7 +638,7 @@
         });
         watch(authed, syncLogAutoRefresh);
         const logLevels = [
-          { label: '全部等级', value: '' },
+          { label: 'All Levels', value: '' },
           { label: 'DEBUG', value: 'DEBUG' },
           { label: 'INFO', value: 'INFO' },
           { label: 'WARNING', value: 'WARNING' },
@@ -690,7 +690,7 @@
             if (logLevel.value) qs.set('level', logLevel.value);
             const res = await api(`/admin/api/logs?${qs.toString()}`);
             logs.value = res.data.items || [];
-            if (showToast) message.success('日志已刷新');
+            if (showToast) message.success('Logs refreshed');
           } catch (error) {
             if (!silent) message.error(normalizeError(error));
           } finally {
@@ -749,7 +749,7 @@
           tokenModal.token = '';
           if (mode === 'add') {
             window.open(tokenHelpUrl, '_blank', 'noopener');
-            message.info('已打开 Token 获取页面，复制 token 后回到这里粘贴保存');
+            message.info('Token retrieval page opened. Copy the token and paste it here to save.');
           }
           if (mode === 'edit' && index) loadTokenForEdit(index);
         }
@@ -779,7 +779,7 @@
             lastEnv.value = res.data.env || '';
             tokenModal.show = false;
             tokenModal.token = '';
-            message.success(res.data.persisted ? '已保存并立即生效' : '当前环境不持久写入，请复制环境变量');
+            message.success(res.data.persisted ? 'Saved and applied immediately' : 'Environment does not support persistent writes. Please copy the env variables.');
             await refreshAll();
           } catch (error) {
             message.error(normalizeError(error));
@@ -794,7 +794,7 @@
             const res = await api(`/admin/api/freebuff-tokens/${index}`, { method: 'DELETE' });
             assign(config, res.data);
             lastEnv.value = res.data.env || '';
-            message.success(res.data.persisted ? '已删除并立即生效' : '已生成新的环境变量文本');
+            message.success(res.data.persisted ? 'Deleted and applied immediately' : 'New env variable text generated');
             await refreshAll();
           } catch (error) {
             message.error(normalizeError(error));
@@ -835,7 +835,7 @@
             const models = (res.data && res.data.data) || [];
             modelOptions.value = models.map(item => ({ label: item.id, value: item.id }));
             if (!testForm.model && modelOptions.value.length) testForm.model = modelOptions.value[0].value;
-            if (showToast) message.success('模型列表已刷新');
+            if (showToast) message.success('Model list refreshed');
           } catch (error) {
             message.error(normalizeError(error));
           } finally {
@@ -848,7 +848,7 @@
           try {
             const res = await api('/admin/api/env');
             assign(envInfo, res.data);
-            if (showToast) message.success('Env 已刷新');
+            if (showToast) message.success('Env refreshed');
           } catch (error) {
             message.error(normalizeError(error));
           } finally {
@@ -861,7 +861,7 @@
           try {
             const res = await api('/admin/api/network');
             assign(networkInfo, res.data);
-            if (showToast) message.success('网络环境已刷新');
+            if (showToast) message.success('Network environment refreshed');
           } catch (error) {
             if (showToast) message.error(normalizeError(error));
           } finally {
@@ -886,7 +886,7 @@
           loading.security = true;
           try {
             await api('/admin/api/security', { method: 'PUT', body: JSON.stringify(security) });
-            message.success('已保存，请使用新的 Admin Key 重新登录');
+            message.success('Saved. Please re-login with the new Admin Key.');
             authed.value = false;
             security.admin_key = '';
           } catch (error) {
@@ -902,7 +902,7 @@
             const res = await api('/admin/api/api-key', { method: 'PUT', body: JSON.stringify(apiKeyForm) });
             assign(config, res.data);
             apiKeyForm.api_key = '';
-            message.success(res.data.persisted ? 'API Key 已保存' : '当前环境不持久写入，请到 Vercel 配置环境变量');
+            message.success(res.data.persisted ? 'API Key saved' : 'Environment does not support persistent writes. Configure in Vercel env variables.');
           } catch (error) {
             message.error(normalizeError(error));
           } finally {
@@ -916,12 +916,12 @@
             return item.detail ? `${line}\n${item.detail}` : line;
           }).join('\n');
           await navigator.clipboard.writeText(text);
-          message.success('日志已复制');
+          message.success('Logs copied');
         }
 
         async function copyEnvContent() {
           await navigator.clipboard.writeText(envInfo.content || '');
-          message.success('Env 内容已复制');
+          message.success('Env content copied');
         }
 
         onMounted(checkSession);

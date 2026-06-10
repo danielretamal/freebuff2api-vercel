@@ -327,9 +327,9 @@ async def env_content(request: Request) -> dict[str, Any]:
             "content": content,
             "editable": not vercel,
             "message": (
-                "Vercel 部署环境不能通过运行中的服务持久修改 .env；请到 Vercel 项目 Settings -> Environment Variables 修改变量，然后重新部署。"
+                "Vercel deployment cannot persist .env changes through the running service. Go to Vercel project Settings -> Environment Variables to modify variables, then redeploy."
                 if vercel
-                else "本地服务读取项目根目录 .env。管理面板里的 Token/API Key 保存会写回这个文件。"
+                else "Local service reads .env from the project root. Token/API Key saves from the admin panel will be written back to this file."
             ),
         }
     )
