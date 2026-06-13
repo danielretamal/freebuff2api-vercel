@@ -38,6 +38,7 @@ class FreebuffSession:
     model: str
     expires_at: str | None = None
     remaining_ms: int | None = None
+    validated_at: float = 0.0
 
     @property
     def is_fresh(self) -> bool:
@@ -79,9 +80,15 @@ class CodebuffClient:
             follow_redirects=True,
             proxy=settings.upstream_proxy_url,
             trust_env=False,
+            http2=_http2_available(),
+            limits=httpx.Limits(
+                max_keepalive_connections=10,
+                keepalive_expiry=60.0,
+            ),
         )
         self._agents_validated = False
         self._validate_lock = asyncio.Lock()
+        self._last_ad_chain = 0.0
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -315,6 +322,10 @@ class CodebuffClient:
         *,
         surface: str | None = None,
     ) -> None:
+        interval = self.settings.ad_chain_interval
+        if interval > 0 and (time.monotonic() - self._last_ad_chain) < interval:
+            logger.debug("ad chain skipped; within cooldown interval=%ss", interval)
+            return
         for provider in self.settings.ad_providers:
             try:
                 ads_data = await self.request_ads(
@@ -333,10 +344,13 @@ class CodebuffClient:
                 )
                 if not ad:
                     continue
-                await self.report_zeroclick_impressions(
-                    list(ad.get("impressionIds") or [])
+                await asyncio.gather(
+                    self.report_zeroclick_impressions(
+                        list(ad.get("impressionIds") or [])
+                    ),
+                    self.report_codebuff_impression(ad.get("impUrl") or ""),
                 )
-                await self.report_codebuff_impression(ad.get("impUrl") or "")
+                self._last_ad_chain = time.monotonic()
                 return
             except CodebuffError as error:
                 logger.warning(
@@ -535,6 +549,15 @@ class SessionManager:
     ) -> FreebuffSession:
         cached = self._sessions.get(model)
         if cached and cached.is_fresh:
+            revalidate_after = self.settings.session_revalidate_seconds
+            age = time.monotonic() - cached.validated_at
+            if revalidate_after > 0 and age < revalidate_after:
+                logger.debug(
+                    "reuse freebuff session without revalidation model=%s age=%.1fs",
+                    model,
+                    age,
+                )
+                return cached
             try:
                 data = await self.client.get_session(cached.instance_id)
                 if data.get("status") == "active" and data.get("model") in {
@@ -542,6 +565,7 @@ class SessionManager:
                     model,
                 }:
                     cached.remaining_ms = data.get("remainingMs")
+                    cached.validated_at = time.monotonic()
                     logger.debug(
                         "reuse freebuff session model=%s instance_id=%s remaining_ms=%s",
                         model,
@@ -583,6 +607,7 @@ class SessionManager:
             self._sessions.clear()
             await self._request_ads_and_streak(surface="waiting_room")
             session = await self.client.create_session(model)
+        session.validated_at = time.monotonic()
         self._sessions[model] = session
         logger.debug(
             "created freebuff session model=%s instance_id=%s remaining_ms=%s",
@@ -654,6 +679,7 @@ class SessionManager:
                 model=current_model,
                 expires_at=data.get("expiresAt"),
                 remaining_ms=data.get("remainingMs"),
+                validated_at=time.monotonic(),
             )
             self._sessions[requested_model] = session
             logger.info(
@@ -803,6 +829,14 @@ def utc_now_iso() -> str:
         "+00:00",
         "Z",
     )
+
+
+def _http2_available() -> bool:
+    try:
+        import h2  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 def _host_header(url: str) -> str:

@@ -154,8 +154,10 @@ async def chat_completions(request: Request) -> Any:
             messages=messages,
         )
         client = lease.client
-        await client.request_ad_chain(messages=messages)
-        await client.validate_agents()
+        await asyncio.gather(
+            client.request_ad_chain(messages=messages),
+            client.validate_agents(),
+        )
         run = await _start_freebuff_run_chain(client, model_config)
         trace_session_id = str(uuid.uuid4())
         payload = build_upstream_payload(
@@ -339,13 +341,15 @@ async def _start_freebuff_run_chain(
         message_id=None,
         start_time=child_started_at,
     )
-    await client.finish_run(child_run_id, total_steps=2)
-    await client.record_run_step(
-        run_id,
-        step_number=1,
-        child_run_ids=[child_run_id],
-        message_id=None,
-        start_time=started_at,
+    await asyncio.gather(
+        client.finish_run(child_run_id, total_steps=2),
+        client.record_run_step(
+            run_id,
+            step_number=1,
+            child_run_ids=[child_run_id],
+            message_id=None,
+            start_time=started_at,
+        ),
     )
     return FreebuffRun(
         run_id=run_id,
