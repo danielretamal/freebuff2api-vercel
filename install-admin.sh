@@ -30,7 +30,7 @@ FREEBUFF_LOG_LEVEL=INFO
 FREEBUFF_LOG_BODY_CHARS=2000
 FREEBUFF_LOG_COLOR=true
 FREEBUFF_HOST=0.0.0.0
-FREEBUFF_PORT=8000
+FREEBUFF_PORT=20004
 FREEBUFF_TIMEZONE=Asia/Shanghai
 FREEBUFF_LOCALE=zh-CN
 FREEBUFF_OS=windows
@@ -57,7 +57,7 @@ systemctl start "${SERVICE_NAME}"
 
 sleep 1
 if systemctl is-active --quiet "${SERVICE_NAME}"; then
-    echo "✅ 管理面板已启动: http://<IP>:8003"
+    echo "✅ 管理面板已启动: http://<IP>:20003"
     echo "提示: 第一次访问会要求设置密码"
 else
     echo "❌ 启动失败，请检查 journalctl -u ${SERVICE_NAME}"

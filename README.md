@@ -93,7 +93,7 @@ chmod +x install-admin.sh
 sudo ./install-admin.sh
 ```
 
-安装完成后，面板默认运行在 `http://0.0.0.0:8003`，首次访问需设置管理员密码。
+安装完成后，面板默认运行在 `http://0.0.0.0:20003`，首次访问需设置管理员密码。
 
 ---
 
@@ -129,7 +129,7 @@ FREEBUFF_LOG_COLOR=true
 
 # 服务监听地址
 FREEBUFF_HOST=0.0.0.0
-FREEBUFF_PORT=8000
+FREEBUFF_PORT=20004
 
 # 时区与语言
 FREEBUFF_TIMEZONE=Asia/Shanghai
@@ -167,7 +167,7 @@ FREEBUFF_PROXY_URL=socks5h://user:pass@127.0.0.1:1080
 ### 非流式
 
 ```bash
-curl http://127.0.0.1:8000/v1/chat/completions \
+curl http://127.0.0.1:20004/v1/chat/completions \
   -H "Authorization: Bearer sk-your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -180,7 +180,7 @@ curl http://127.0.0.1:8000/v1/chat/completions \
 ### 流式
 
 ```bash
-curl -N http://127.0.0.1:8000/v1/chat/completions \
+curl -N http://127.0.0.1:20004/v1/chat/completions \
   -H "Authorization: Bearer sk-your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -193,7 +193,7 @@ curl -N http://127.0.0.1:8000/v1/chat/completions \
 ### 获取模型列表
 
 ```bash
-curl http://127.0.0.1:8000/v1/models
+curl http://127.0.0.1:20004/v1/models
 ```
 
 ---

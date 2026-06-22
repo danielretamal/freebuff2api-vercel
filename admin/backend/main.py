@@ -22,7 +22,7 @@ import auth
 import config_manager
 
 # ── Config ──
-ADMIN_PORT = int(os.getenv("FREEBUFF2API_ADMIN_PORT", "8003"))
+ADMIN_PORT = int(os.getenv("FREEBUFF2API_ADMIN_PORT", "20003"))
 ADMIN_HOST = os.getenv("FREEBUFF2API_ADMIN_HOST", "0.0.0.0")
 SERVICE_NAME = os.getenv("FREEBUFF2API_SERVICE_NAME", "freebuff2api")
 ENV_PATH = str(config_manager._env_path())
@@ -182,7 +182,7 @@ async def api_status(request: Request) -> dict[str, Any]:
 
     env = config_manager.load_env()
     accounts = config_manager.parse_accounts(env)
-    port = int(env.get("FREEBUFF_PORT", "8000"))
+    port = int(env.get("FREEBUFF_PORT", "20004"))
     external_ip = _get_external_ip()
     api_address = f"http://{external_ip}:{port}/v1"
 
@@ -410,7 +410,7 @@ async def test_chat(request: Request) -> dict[str, Any]:
     await require_auth(request)
     body = await request.json()
     env = config_manager.load_env()
-    port = int(env.get("FREEBUFF_PORT", "8000"))
+    port = int(env.get("FREEBUFF_PORT", "20004"))
     # use first enabled key from api_keys.json
     keys = _load_api_keys()
     api_key = ""

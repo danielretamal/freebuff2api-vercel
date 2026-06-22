@@ -34,7 +34,7 @@ const app = createApp({
       service: { active: false, uptime: 'N/A', name: 'freebuff2api' },
       accounts: { count: 0 },
       account_stats: null,
-      config: { host: '0.0.0.0', port: 8000, debug: false, proxy_enabled: false, log_level: 'INFO' },
+      config: { host: '0.0.0.0', port: 20004, debug: false, proxy_enabled: false, log_level: 'INFO' },
     });
 
     // ========== Accounts ==========
@@ -60,7 +60,7 @@ const app = createApp({
       FREEBUFF_LOG_BODY_CHARS: '2000',
       FREEBUFF_LOG_COLOR: true,
       FREEBUFF_HOST: '0.0.0.0',
-      FREEBUFF_PORT: '8000',
+      FREEBUFF_PORT: '20004',
       FREEBUFF_TIMEZONE: 'Asia/Shanghai',
       FREEBUFF_LOCALE: 'zh-CN',
       FREEBUFF_OS: 'windows',
@@ -390,7 +390,7 @@ const app = createApp({
         settingsForm.FREEBUFF_LOG_BODY_CHARS = env.FREEBUFF_LOG_BODY_CHARS || '2000';
         settingsForm.FREEBUFF_LOG_COLOR = (env.FREEBUFF_LOG_COLOR || '').toLowerCase() !== 'false';
         settingsForm.FREEBUFF_HOST = env.FREEBUFF_HOST || '0.0.0.0';
-        settingsForm.FREEBUFF_PORT = env.FREEBUFF_PORT || '8000';
+        settingsForm.FREEBUFF_PORT = env.FREEBUFF_PORT || '20004';
         settingsForm.FREEBUFF_TIMEZONE = env.FREEBUFF_TIMEZONE || 'Asia/Shanghai';
         settingsForm.FREEBUFF_LOCALE = env.FREEBUFF_LOCALE || 'zh-CN';
         settingsForm.FREEBUFF_OS = env.FREEBUFF_OS || 'windows';
