@@ -77,6 +77,8 @@ const app = createApp({
     const showEditKeyModal = ref(false);
     const editKeyId = ref('');
     const editKeyLabel = ref('');
+    const showGenerateModal = ref(false);
+    const generateKeyLabel = ref('');
 
     // ========== Logs ==========
     const logConnected = ref(false);
@@ -537,18 +539,36 @@ const app = createApp({
       try {
         const res = await request('/api/keys', {
           method: 'POST',
-          body: JSON.stringify({ label: newKeyLabel.value })
+          body: JSON.stringify({ label: generateKeyLabel.value.trim() || '未命名' })
         });
         if (res.ok && res.key) {
           newKeyValue.value = res.key;
           showNewKeyResult.value = true;
-          showToast('API Key 已创建，请立即复制保存', 'success');
+          showGenerateModal.value = false;
+          generateKeyLabel.value = '';
+          showToast('API Key 已创建', 'success');
           await loadApiKeys();
         }
       } catch (e) {
         showToast(e.message || '创建失败', 'error');
       }
       saveLoading.value = false;
+    }
+
+    function openGenerateKey() {
+      generateKeyLabel.value = '';
+      showGenerateModal.value = true;
+    }
+
+    function dismissNewKey() {
+      showNewKeyResult.value = false;
+      newKeyValue.value = '';
+    }
+
+    function quickCopyKey(keyText) {
+      navigator.clipboard.writeText(keyText).then(() => {
+        showToast('已复制到剪贴板', 'success');
+      }).catch(() => {});
     }
 
     async function toggleApiKey(keyId, currentEnabled) {
@@ -572,12 +592,6 @@ const app = createApp({
       } catch (e) {
         showToast(e.message || '删除失败', 'error');
       }
-    }
-
-    function dismissNewKey() {
-      showNewKeyResult.value = false;
-      newKeyValue.value = '';
-      newKeyLabel.value = '';
     }
 
     function openEditKey(k) {
@@ -630,6 +644,7 @@ const app = createApp({
       proxyTesting, proxyTestResult,
       apiKeys, newKeyLabel, showNewKeyResult, newKeyValue,
       showEditKeyModal, editKeyId, editKeyLabel,
+      showGenerateModal, generateKeyLabel,
       testModel, testMessages, testInput, testLoading, testSystem, models,
       isLoggedIn, showSetup, showLogin, showApp,
       checkAuth, doSetup, doLogin, doLogout,
@@ -639,7 +654,7 @@ const app = createApp({
       connectLog, disconnectLog, toggleLog, clearLog,
       sendTest, clearChat, testProxy, copyText, showToast,
       loadApiKeys, createApiKey, toggleApiKey, deleteApiKey, dismissNewKey,
-      openEditKey, saveEditKey,
+      openEditKey, saveEditKey, openGenerateKey, quickCopyKey,
     };
   },
 
@@ -829,34 +844,37 @@ const app = createApp({
           <div class="page-title">API Key 管理</div>
           <div class="actions">
             <button class="btn" :disabled="loading" @click="loadApiKeys">刷新</button>
-            <button class="btn primary" @click="createApiKey">生成 Key</button>
+            <button class="btn primary" @click="openGenerateKey">生成 Key</button>
           </div>
         </div>
         <div v-if="showNewKeyResult" class="alert alert-success" style="margin-bottom:16px;padding:16px;background:var(--primary-light);border-radius:8px">
-          <div style="font-weight:600;margin-bottom:8px">🎉 API Key 已生成，请立即复制保存（关闭后无法再次查看）</div>
-          <div style="font-family:monospace;font-size:16px;background:#fff;padding:8px 12px;border-radius:4px;margin-bottom:8px">{{ newKeyValue }}</div>
-          <div style="display:flex;gap:8px">
-            <button class="btn primary" @click="copyText(newKeyValue)">复制</button>
-            <button class="btn" @click="dismissNewKey">关闭</button>
+          <div style="font-weight:600;margin-bottom:8px">API Key 已生成，点击复制图标即可复制</div>
+          <div style="font-family:monospace;font-size:16px;background:#fff;padding:8px 12px;border-radius:4px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+            <span>{{ newKeyValue }}</span>
+            <button class="btn sm" @click="quickCopyKey(newKeyValue)" title="复制" style="flex-shrink:0;margin-left:12px">📋 复制</button>
           </div>
+          <button class="btn" @click="dismissNewKey">关闭</button>
         </div>
         <div class="table-wrap">
           <div class="table-header">
             <div style="flex:1">Key</div>
             <div style="flex:1">备注</div>
             <div style="width:100px">状态</div>
-            <div style="width:120px">创建时间</div>
-            <div style="width:120px;text-align:right">操作</div>
+            <div style="width:140px">创建时间</div>
+            <div style="width:180px;text-align:right">操作</div>
           </div>
           <div v-for="k in apiKeys" :key="k.id" class="table-row">
-            <div style="flex:1;font-family:monospace;font-size:13px">{{ k.key }}</div>
+            <div style="flex:1;font-family:monospace;font-size:13px;display:flex;align-items:center;gap:6px">
+              <span>{{ k.key }}</span>
+              <button class="btn sm" @click="quickCopyKey(k.key)" title="复制" style="flex-shrink:0;padding:2px 6px">📋</button>
+            </div>
             <div style="flex:1">{{ k.label || '-' }}</div>
             <div style="width:100px">
               <span v-if="k.enabled" class="tag tag-success">启用</span>
               <span v-else class="tag tag-error">禁用</span>
             </div>
-            <div style="width:120px;font-size:12px;color:var(--text-secondary)">{{ k.created_at }}</div>
-            <div style="width:120px;text-align:right;display:flex;gap:6px;justify-content:flex-end">
+            <div style="width:140px;font-size:12px;color:var(--text-secondary)">{{ k.created_at }}</div>
+            <div style="width:180px;text-align:right;display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap">
               <button class="btn sm" @click="toggleApiKey(k.id, k.enabled)">{{ k.enabled ? '禁用' : '启用' }}</button>
               <button class="btn sm" @click="openEditKey(k)">编辑</button>
               <button class="btn sm danger" @click="deleteApiKey(k.id)">删除</button>
@@ -1088,6 +1106,21 @@ const app = createApp({
     <div class="modal-actions">
       <button class="btn" @click="showEditKeyModal=false">取消</button>
       <button class="btn primary" @click="saveEditKey">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate API Key Modal -->
+<div v-if="showGenerateModal" class="modal-backdrop" @click.self="showGenerateModal=false">
+  <div class="modal-card">
+    <div class="modal-title">生成 API Key</div>
+    <div class="form-group">
+      <label>备注名称 <span style="color:var(--error)">*</span></label>
+      <input v-model="generateKeyLabel" class="input" placeholder="例如：生产环境、测试用" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn" @click="showGenerateModal=false">取消</button>
+      <button class="btn primary" :disabled="!generateKeyLabel.trim()" @click="createApiKey">生成</button>
     </div>
   </div>
 </div>
