@@ -71,7 +71,6 @@ const app = createApp({
 
     // ========== API Keys ==========
     const apiKeys = ref([]);
-    const newKeyLabel = ref('');
     const showNewKeyResult = ref(false);
     const newKeyValue = ref('');
     const showEditKeyModal = ref(false);
@@ -364,9 +363,11 @@ const app = createApp({
     }
 
     async function refreshAccounts() {
+      loading.value = true;
       await loadAccounts();
       if (!accounts.value.length) {
         showToast('暂无账号', 'info');
+        loading.value = false;
         return;
       }
       let passed = 0, failed = 0;
@@ -376,6 +377,7 @@ const app = createApp({
         else failed++;
       }
       showToast(`测试完成：${passed} 个正常，${failed} 个异常`, 'success');
+      loading.value = false;
     }
 
     // ========== Settings ==========
@@ -664,7 +666,7 @@ const app = createApp({
       showEditModal, editAccountIdx, editAccountToken, editAccountLabel,
       settingsForm, logConnected, logLines,
       proxyTesting, proxyTestResult,
-      apiKeys, newKeyLabel, showNewKeyResult, newKeyValue,
+      apiKeys, showNewKeyResult, newKeyValue,
       showEditKeyModal, editKeyId, editKeyLabel,
       showGenerateModal, generateKeyLabel,
       testModel, testMessages, testInput, testLoading, testSystem, models,
@@ -785,7 +787,7 @@ const app = createApp({
         <div class="page-title" style="margin-top:24px">配置摘要</div>
         <div class="table-wrap">
           <div class="table-row"><div style="width:180px;color:var(--text-secondary)">API 地址</div><div>{{ statusData.config.api_address }}</div></div>
-          <div class="table-row"><div style="width:180px;color:var(--text-secondary)">上游地址</div><div>{{ statusData.config.host }}:{{ statusData.config.port }}</div></div>
+          <div class="table-row"><div style="width:180px;color:var(--text-secondary)">监听地址</div><div>{{ statusData.config.host }}:{{ statusData.config.port }}</div></div>
           <div class="table-row"><div style="width:180px;color:var(--text-secondary)">日志级别</div><div>{{ statusData.config.log_level }}</div></div>
           <div class="table-row"><div style="width:180px;color:var(--text-secondary)">代理</div><div>{{ statusData.config.proxy_enabled ? '已开启' : '已关闭' }}</div></div>
           <div class="table-row"><div style="width:180px;color:var(--text-secondary)">调试模式</div><div>{{ statusData.config.debug ? '已开启' : '已关闭' }}</div></div>
@@ -825,7 +827,10 @@ const app = createApp({
         <div class="page-header">
           <div class="page-title">账号管理</div>
           <div class="actions">
-            <button class="btn" :disabled="loading" @click="refreshAccounts">刷新</button>
+            <button class="btn" :disabled="loading" @click="refreshAccounts">
+  <span v-if="loading" class="spinner"></span>
+  <span v-else>刷新</span>
+</button>
             <button class="btn primary" @click="addAccount">添加账号</button>
           </div>
         </div>
