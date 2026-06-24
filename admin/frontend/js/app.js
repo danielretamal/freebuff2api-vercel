@@ -644,6 +644,7 @@ const app = createApp({
       if (isLoggedIn.value) {
         await loadStatus();
         if (page.value === 'accounts') await loadAccounts();
+        if (page.value === 'keys') await loadApiKeys();
         if (page.value === 'settings') await loadSettings();
       }
     });
