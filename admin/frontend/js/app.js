@@ -79,6 +79,14 @@ const app = createApp({
     const proxyTesting = ref(false);
     const proxyTestResult = ref(null);
 
+    // ========== Change Password ==========
+    const pwdForm = reactive({
+      current: '',
+      newPwd: '',
+      confirm: '',
+    });
+    const pwdLoading = ref(false);
+
     // ========== API Keys ==========
     const apiKeys = ref([]);
     const showNewKeyResult = ref(false);
@@ -450,6 +458,27 @@ const app = createApp({
       saveLoading.value = false;
     }
 
+    async function changePassword() {
+      if (!pwdForm.current) return showToast('请输入当前密码', 'error');
+      if (!pwdForm.newPwd) return showToast('请输入新密码', 'error');
+      if (pwdForm.newPwd.length < 6) return showToast('新密码至少6位', 'error');
+      if (pwdForm.newPwd !== pwdForm.confirm) return showToast('两次新密码不一致', 'error');
+      pwdLoading.value = true;
+      try {
+        await request('/api/auth/change-password', {
+          method: 'POST',
+          body: JSON.stringify({ current_password: pwdForm.current, new_password: pwdForm.newPwd })
+        });
+        pwdForm.current = '';
+        pwdForm.newPwd = '';
+        pwdForm.confirm = '';
+        showToast('密码修改成功，请使用新密码重新登录', 'success');
+      } catch (e) {
+        showToast(e.message || '修改失败', 'error');
+      }
+      pwdLoading.value = false;
+    }
+
     // ========== Logs ==========
     function connectLog() {
       disconnectLog();
@@ -687,6 +716,7 @@ const app = createApp({
       showEditModal, editAccountIdx, editAccountToken, editAccountLabel,
       settingsForm, logConnected, logLines,
       proxyTesting, proxyTestResult,
+      pwdForm, pwdLoading,
       apiKeys, showNewKeyResult, newKeyValue,
       showEditKeyModal, editKeyId, editKeyLabel,
       showGenerateModal, generateKeyLabel,
@@ -696,6 +726,7 @@ const app = createApp({
       loadStatus, toggleService, restartService,
       loadAccounts, refreshAccounts, saveAccounts, addAccount, confirmAddAccount, openEditAccount, confirmEditAccount, removeAccount, testAccount,
       loadSettings, saveSettings,
+      changePassword,
       connectLog, disconnectLog, toggleLog, clearLog,
       sendTest, clearChat, testProxy, copyText, showToast,
       loadApiKeys, createApiKey, toggleApiKey, deleteApiKey, dismissNewKey,
@@ -1028,6 +1059,34 @@ const app = createApp({
                 <input v-model="settingsForm.FREEBUFF_LOG_COLOR" type="checkbox" />
                 <span>彩色日志</span>
               </label>
+            </div>
+          </div>
+          <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:24px">
+            <div style="font-size:14px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:6px">
+              <span class="sc-icon">🔒</span> 修改密码
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>当前密码</label>
+                <input v-model="pwdForm.current" type="password" class="input" placeholder="输入当前密码" />
+              </div>
+              <div class="form-group"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>新密码</label>
+                <input v-model="pwdForm.newPwd" type="password" class="input" placeholder="至少6位" />
+              </div>
+              <div class="form-group">
+                <label>确认新密码</label>
+                <input v-model="pwdForm.confirm" type="password" class="input" placeholder="再次输入新密码" />
+              </div>
+            </div>
+            <div style="margin-top:12px">
+              <button class="btn primary" :disabled="pwdLoading" @click="changePassword">
+                <span v-if="pwdLoading" class="spinner"></span>
+                <span v-else>修改密码</span>
+              </button>
             </div>
           </div>
         </div>
