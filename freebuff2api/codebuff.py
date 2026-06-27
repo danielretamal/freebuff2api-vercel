@@ -531,6 +531,26 @@ class SessionManager:
         self.settings = settings
         self._sessions: dict[str, FreebuffSession] = {}
         self._lock = asyncio.Lock()
+        # BUG C: per-model timestamp of last invalidate() call. _delete_locked_session
+        # refuses to silently adopt an upstream "active" session inside this safety
+        # window, because Codebuff servers can echo back the same instance_id from
+        # discovery GETs even after it has actually been superseded — re-adopting it
+        # would let the optimistic cache refill with a doomed session.
+        self._last_invalidated_at: dict[str, float] = {}
+        # BUG B: per-model timestamp of last upstream verification of a cached
+        # session. Optimistic reuse skips the GET round-trip inside this window
+        # (~30s); outside it, _ensure_session_locked does a lightweight GET with
+        # the cached instance_id to confirm Codebuff still considers it active
+        # before reusing the cache.
+        self._verified_at: dict[str, float] = {}
+        # Safety window after invalidate() during which _delete_locked_session
+        # must NOT adopt any active session discovered upstream; forces the
+        # caller down the full create-session path instead.
+        self._invalidate_safety_seconds: float = 60.0
+        # Verify window: optimistic reuse does at most one upstream GET per
+        # model inside this period. Bursts of chats within the window
+        # amortize the verify cost.
+        self._verify_window_seconds: float = 30.0
 
     async def ensure_session(
         self,
@@ -560,13 +580,58 @@ class SessionManager:
     ) -> FreebuffSession:
         cached = self._sessions.get(model)
         if cached and cached.is_fresh:
-            logger.info(
-                "optimistic reuse freebuff session model=%s instance_id=%s remaining_ms=%s",
+            now = time.monotonic()
+            last_verify = self._verified_at.get(model, 0.0)
+            # BUG B FIX: cheap optimistic reuse while inside the verify window;
+            # outside it, ask upstream with the cached instance_id so we can
+            # detect a "stale witness" where Codebuff has actually superseded
+            # the session but a discovery GET would still echo the same id.
+            if now - last_verify < self._verify_window_seconds:
+                logger.info(
+                    "optimistic reuse freebuff session model=%s instance_id=%s remaining_ms=%s",
+                    model,
+                    cached.instance_id,
+                    cached.remaining_ms,
+                )
+                return cached
+            self._verified_at[model] = now
+            try:
+                upstream_data = await self.client.get_session(
+                    instance_id=cached.instance_id
+                )
+            except CodebuffError as error:
+                logger.warning(
+                    "optimistic reuse verify failed (using cached best-effort) model=%s instance_id=%s error=%s",
+                    model,
+                    cached.instance_id,
+                    error,
+                )
+                return cached
+            upstream_instance = upstream_data.get("instanceId")
+            upstream_status = upstream_data.get("status")
+            if (
+                upstream_status == "active"
+                and upstream_instance == cached.instance_id
+            ):
+                logger.info(
+                    "optimistic reuse verified model=%s instance_id=%s remaining_ms=%s",
+                    model,
+                    cached.instance_id,
+                    cached.remaining_ms,
+                )
+                return cached
+            logger.warning(
+                "optimistic reuse rejected (stale witness) model=%s cached_instance=%s upstream_instance=%s upstream_status=%s",
                 model,
                 cached.instance_id,
-                cached.remaining_ms,
+                upstream_instance,
+                upstream_status,
             )
-            return cached
+            self._sessions.pop(model, None)
+            try:
+                await self.client.delete_session()
+            except CodebuffError:
+                pass
 
         active_session = await self._delete_locked_session(model)
         if active_session:
@@ -637,6 +702,20 @@ class SessionManager:
         self,
         requested_model: str,
     ) -> FreebuffSession | None:
+        # BUG C FIX: refuse to silently adopt any upstream "active" session
+        # inside the invalidate safety window — Codebuff servers can echo back
+        # the same instance_id from discovery GETs even when the session has
+        # actually been superseded, which would refill the optimistic cache with
+        # a doomed session and reproduce the 409 loop. Forcing a fresh create
+        # path here is the only way to break the cycle.
+        last_inv = self._last_invalidated_at.get(requested_model, 0.0)
+        if last_inv and time.monotonic() - last_inv < self._invalidate_safety_seconds:
+            logger.info(
+                "skipping adopt during invalidate-safety window model=%s age_s=%.1f",
+                requested_model,
+                time.monotonic() - last_inv,
+            )
+            return None
         try:
             data = await self.client.get_session()
         except CodebuffError:
@@ -689,13 +768,20 @@ class SessionManager:
         session_expired so we don't keep returning a stale cached session.
         Also deletes the upstream session so get_session() won't re-adopt it,
         which would cause an infinite 409/410 loop.
+
+        BUG C: stamp _last_invalidated_at[model] so _delete_locked_session
+        refuses to silently adopt an upstream "active" session inside the
+        safety window — and reset _verified_at[model] so the next ensure
+        cycle does a fresh upstream GET to confirm the new session is real.
         """
-        popped = self._sessions.pop(model, None)
-        if popped is not None:
+        previous = self._sessions.pop(model, None)
+        self._last_invalidated_at[model] = time.monotonic()
+        self._verified_at[model] = 0.0
+        if previous is not None:
             logger.info(
                 "invalidated cached freebuff session model=%s instance_id=%s reason=%s",
                 model,
-                popped.instance_id,
+                previous.instance_id,
                 reason,
             )
         try:
@@ -956,6 +1042,34 @@ def _upstream_error(
             return CodebuffError(
                 f"Codebuff 409 session_superseded: {data.get('message') or text}",
                 409,
+                is_session_error=True,
+            )
+
+    # BUG A FIX: Codebuff returns 428 when the token has no active session and
+    # the client must first walk the waiting_room flow (request_ad_chain +
+    # get_streak). Without this branch the request is collapsed to a generic
+    # 502 wrapper and Hermes reports "Provider authentication failed" — even
+    # though the proxy + credentials are fine. Marking it as a session error
+    # makes chat_completions invalidate the local cache and retry, which on
+    # the next attempt follows the standard _request_ads_and_streak path
+    # before re-creating the session.
+    if response.status_code == 428:
+        try:
+            data = (
+                response.json()
+                if body is None
+                else httpx.Response(
+                    response.status_code,
+                    content=body,
+                    headers=response.headers,
+                ).json()
+            )
+        except ValueError:
+            data = {}
+        if data.get("error") == "waiting_room_required":
+            return CodebuffError(
+                f"Codebuff 428 waiting_room_required: {data.get('message') or text}",
+                428,
                 is_session_error=True,
             )
 
