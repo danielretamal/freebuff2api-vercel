@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import time
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, AsyncIterator
 from urllib.parse import urlparse
 
@@ -29,22 +27,9 @@ CHAT_COMPLETIONS_USER_AGENT = (
 
 
 class CodebuffError(RuntimeError):
-    def __init__(
-        self,
-        message: str,
-        status_code: int = 502,
-        *,
-        is_rate_limit: bool = False,
-        reset_at: str | None = None,
-        retry_after_ms: int | None = None,
-        is_session_error: bool = False,
-    ) -> None:
+    def __init__(self, message: str, status_code: int = 502) -> None:
         super().__init__(message)
         self.status_code = status_code
-        self.is_rate_limit = is_rate_limit
-        self.reset_at = reset_at
-        self.retry_after_ms = retry_after_ms
-        self.is_session_error = is_session_error
 
 
 @dataclass
@@ -53,6 +38,7 @@ class FreebuffSession:
     model: str
     expires_at: str | None = None
     remaining_ms: int | None = None
+    validated_at: float = 0.0
 
     @property
     def is_fresh(self) -> bool:
@@ -79,10 +65,6 @@ class FreebuffSessionLease:
     _lock: asyncio.Lock
     _closed: bool = False
 
-    @property
-    def sessions(self):
-        return self._pool._accounts[self._account_index].sessions
-
     async def aclose(self) -> None:
         if self._closed:
             return
@@ -90,24 +72,23 @@ class FreebuffSessionLease:
         self._lock.release()
 
 
-@dataclass
-class RateLimitState:
-    blocked_models: dict[str, float] = field(default_factory=dict)
-    last_error_at: float | None = None
-
-
 class CodebuffClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self._client = httpx.AsyncClient(
-            timeout=httpx.Timeout(settings.request_timeout, read=300.0),
-            limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
+            timeout=httpx.Timeout(settings.request_timeout, read=None),
             follow_redirects=True,
             proxy=settings.upstream_proxy_url,
             trust_env=False,
+            http2=_http2_available(),
+            limits=httpx.Limits(
+                max_keepalive_connections=10,
+                keepalive_expiry=60.0,
+            ),
         )
         self._agents_validated = False
         self._validate_lock = asyncio.Lock()
+        self._last_ad_chain = 0.0
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -228,6 +209,7 @@ class CodebuffClient:
         )
 
     async def create_session(self, model: str) -> FreebuffSession:
+        logger.info("create freebuff session requested model=%s", model)
         data = await self._json(
             "POST",
             "/api/v1/freebuff/session",
@@ -340,6 +322,10 @@ class CodebuffClient:
         *,
         surface: str | None = None,
     ) -> None:
+        interval = self.settings.ad_chain_interval
+        if interval > 0 and (time.monotonic() - self._last_ad_chain) < interval:
+            logger.debug("ad chain skipped; within cooldown interval=%ss", interval)
+            return
         for provider in self.settings.ad_providers:
             try:
                 ads_data = await self.request_ads(
@@ -358,10 +344,13 @@ class CodebuffClient:
                 )
                 if not ad:
                     continue
-                await self.report_zeroclick_impressions(
-                    list(ad.get("impressionIds") or [])
+                await asyncio.gather(
+                    self.report_zeroclick_impressions(
+                        list(ad.get("impressionIds") or [])
+                    ),
+                    self.report_codebuff_impression(ad.get("impUrl") or ""),
                 )
-                await self.report_codebuff_impression(ad.get("impUrl") or "")
+                self._last_ad_chain = time.monotonic()
                 return
             except CodebuffError as error:
                 logger.warning(
@@ -531,26 +520,6 @@ class SessionManager:
         self.settings = settings
         self._sessions: dict[str, FreebuffSession] = {}
         self._lock = asyncio.Lock()
-        # BUG C: per-model timestamp of last invalidate() call. _delete_locked_session
-        # refuses to silently adopt an upstream "active" session inside this safety
-        # window, because Codebuff servers can echo back the same instance_id from
-        # discovery GETs even after it has actually been superseded — re-adopting it
-        # would let the optimistic cache refill with a doomed session.
-        self._last_invalidated_at: dict[str, float] = {}
-        # BUG B: per-model timestamp of last upstream verification of a cached
-        # session. Optimistic reuse skips the GET round-trip inside this window
-        # (~30s); outside it, _ensure_session_locked does a lightweight GET with
-        # the cached instance_id to confirm Codebuff still considers it active
-        # before reusing the cache.
-        self._verified_at: dict[str, float] = {}
-        # Safety window after invalidate() during which _delete_locked_session
-        # must NOT adopt any active session discovered upstream; forces the
-        # caller down the full create-session path instead.
-        self._invalidate_safety_seconds: float = 60.0
-        # Verify window: optimistic reuse does at most one upstream GET per
-        # model inside this period. Bursts of chats within the window
-        # amortize the verify cost.
-        self._verify_window_seconds: float = 30.0
 
     async def ensure_session(
         self,
@@ -580,58 +549,45 @@ class SessionManager:
     ) -> FreebuffSession:
         cached = self._sessions.get(model)
         if cached and cached.is_fresh:
-            now = time.monotonic()
-            last_verify = self._verified_at.get(model, 0.0)
-            # BUG B FIX: cheap optimistic reuse while inside the verify window;
-            # outside it, ask upstream with the cached instance_id so we can
-            # detect a "stale witness" where Codebuff has actually superseded
-            # the session but a discovery GET would still echo the same id.
-            if now - last_verify < self._verify_window_seconds:
-                logger.info(
-                    "optimistic reuse freebuff session model=%s instance_id=%s remaining_ms=%s",
+            revalidate_after = self.settings.session_revalidate_seconds
+            age = time.monotonic() - cached.validated_at
+            if revalidate_after > 0 and age < revalidate_after:
+                logger.debug(
+                    "reuse freebuff session without revalidation model=%s age=%.1fs",
                     model,
-                    cached.instance_id,
-                    cached.remaining_ms,
+                    age,
                 )
                 return cached
-            self._verified_at[model] = now
             try:
-                upstream_data = await self.client.get_session(
-                    instance_id=cached.instance_id
-                )
-            except CodebuffError as error:
-                logger.warning(
-                    "optimistic reuse verify failed (using cached best-effort) model=%s instance_id=%s error=%s",
+                data = await self.client.get_session(cached.instance_id)
+                if data.get("status") == "active" and data.get("model") in {
+                    None,
                     model,
-                    cached.instance_id,
-                    error,
-                )
-                return cached
-            upstream_instance = upstream_data.get("instanceId")
-            upstream_status = upstream_data.get("status")
-            if (
-                upstream_status == "active"
-                and upstream_instance == cached.instance_id
-            ):
-                logger.info(
-                    "optimistic reuse verified model=%s instance_id=%s remaining_ms=%s",
-                    model,
-                    cached.instance_id,
-                    cached.remaining_ms,
-                )
-                return cached
-            logger.warning(
-                "optimistic reuse rejected (stale witness) model=%s cached_instance=%s upstream_instance=%s upstream_status=%s",
-                model,
-                cached.instance_id,
-                upstream_instance,
-                upstream_status,
-            )
-            self._sessions.pop(model, None)
-            try:
-                await self.client.delete_session()
+                }:
+                    cached.remaining_ms = data.get("remainingMs")
+                    cached.validated_at = time.monotonic()
+                    logger.debug(
+                        "reuse freebuff session model=%s instance_id=%s remaining_ms=%s",
+                        model,
+                        cached.instance_id,
+                        cached.remaining_ms,
+                    )
+                    return cached
+                if data.get("status") == "active":
+                    logger.info(
+                        "cached freebuff session model mismatch cached=%s upstream=%s",
+                        model,
+                        data.get("model"),
+                    )
+                    self._sessions.pop(model, None)
             except CodebuffError:
-                pass
+                logger.debug(
+                    "cached freebuff session invalid model=%s instance_id=%s",
+                    model,
+                    cached.instance_id,
+                    exc_info=self.settings.debug,
+                )
+                self._sessions.pop(model, None)
 
         active_session = await self._delete_locked_session(model)
         if active_session:
@@ -651,6 +607,7 @@ class SessionManager:
             self._sessions.clear()
             await self._request_ads_and_streak(surface="waiting_room")
             session = await self.client.create_session(model)
+        session.validated_at = time.monotonic()
         self._sessions[model] = session
         logger.debug(
             "created freebuff session model=%s instance_id=%s remaining_ms=%s",
@@ -702,20 +659,6 @@ class SessionManager:
         self,
         requested_model: str,
     ) -> FreebuffSession | None:
-        # BUG C FIX: refuse to silently adopt any upstream "active" session
-        # inside the invalidate safety window — Codebuff servers can echo back
-        # the same instance_id from discovery GETs even when the session has
-        # actually been superseded, which would refill the optimistic cache with
-        # a doomed session and reproduce the 409 loop. Forcing a fresh create
-        # path here is the only way to break the cycle.
-        last_inv = self._last_invalidated_at.get(requested_model, 0.0)
-        if last_inv and time.monotonic() - last_inv < self._invalidate_safety_seconds:
-            logger.info(
-                "skipping adopt during invalidate-safety window model=%s age_s=%.1f",
-                requested_model,
-                time.monotonic() - last_inv,
-            )
-            return None
         try:
             data = await self.client.get_session()
         except CodebuffError:
@@ -736,6 +679,7 @@ class SessionManager:
                 model=current_model,
                 expires_at=data.get("expiresAt"),
                 remaining_ms=data.get("remainingMs"),
+                validated_at=time.monotonic(),
             )
             self._sessions[requested_model] = session
             logger.info(
@@ -759,53 +703,12 @@ class SessionManager:
         self._sessions.clear()
         return None
 
-    async def invalidate_session(
-        self, model: str, *, reason: str = "chat_failure"
-    ) -> None:
-        """Drop a cached session so the next request re-creates upstream.
-
-        Called when chat fails with session_model_mismatch / session_superseded /
-        session_expired so we don't keep returning a stale cached session.
-        Also deletes the upstream session so get_session() won't re-adopt it,
-        which would cause an infinite 409/410 loop.
-
-        BUG C: stamp _last_invalidated_at[model] so _delete_locked_session
-        refuses to silently adopt an upstream "active" session inside the
-        safety window — and reset _verified_at[model] so the next ensure
-        cycle does a fresh upstream GET to confirm the new session is real.
-        """
-        previous = self._sessions.pop(model, None)
-        self._last_invalidated_at[model] = time.monotonic()
-        self._verified_at[model] = 0.0
-        if previous is not None:
-            logger.info(
-                "invalidated cached freebuff session model=%s instance_id=%s reason=%s",
-                model,
-                previous.instance_id,
-                reason,
-            )
-        try:
-            await self.client.delete_session()
-            logger.info(
-                "deleted upstream freebuff session after invalidation model=%s reason=%s",
-                model,
-                reason,
-            )
-        except Exception:
-            logger.debug(
-                "could not delete upstream session (may already be dead) model=%s reason=%s",
-                model,
-                reason,
-                exc_info=True,
-            )
-
 
 @dataclass
 class CodebuffAccount:
     client: CodebuffClient
     sessions: SessionManager
     busy: bool = False
-    rate_limit: RateLimitState = field(default_factory=RateLimitState)
 
 
 @dataclass
@@ -817,19 +720,12 @@ class CodebuffAccountLease:
     _account_index: int
     _closed: bool = False
 
-    @property
-    def sessions(self):
-        return self._pool._accounts[self._account_index].sessions
-
     async def aclose(self) -> None:
         if self._closed:
             return
         self._closed = True
         await self._session_lease.aclose()
         await self._pool.release(self._account_index)
-
-    def mark_rate_limited(self, model: str, reset_at: str | None) -> None:
-        self._pool.mark_rate_limited(self._account_index, model, reset_at)
 
 
 class CodebuffAccountPool:
@@ -847,13 +743,6 @@ class CodebuffAccountPool:
             )
         self._next_index = 0
         self._condition = asyncio.Condition()
-        self._stats_file = Path("/root/.freebuff2api/account_stats.json")
-        self._account_stats = [
-            {"use_count": 0, "last_used_at": None, "last_model": None, "busy": False}
-            for _ in self._accounts
-        ]
-        self._last_reserved_index = -1
-        self._stats_lock = asyncio.Lock()
 
     @property
     def account_count(self) -> int:
@@ -873,20 +762,6 @@ class CodebuffAccountPool:
             return_exceptions=True,
         )
 
-    async def _write_stats(self) -> None:
-        async with self._stats_lock:
-            data = {
-                "account_count": len(self._accounts),
-                "last_reserved_index": self._last_reserved_index,
-                "accounts": self._account_stats,
-            }
-            try:
-                self._stats_file.write_text(
-                    json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-                )
-            except Exception:
-                pass
-
     async def acquire_session(
         self,
         model: str,
@@ -894,25 +769,29 @@ class CodebuffAccountPool:
     ) -> CodebuffAccountLease:
         account_index = await self._reserve_account(model)
         account = self._accounts[account_index]
+        logger.info(
+            "account reserved index=%s session_model=%s messages=%s",
+            account_index + 1,
+            model,
+            len(messages or []),
+        )
         try:
             session_lease = await account.sessions.acquire_session(model, messages)
         except Exception:
+            logger.exception(
+                "account session acquire failed index=%s session_model=%s",
+                account_index + 1,
+                model,
+            )
             await self.release(account_index)
             raise
-        # update stats
-        self._account_stats[account_index]["use_count"] += 1
-        self._account_stats[account_index]["last_used_at"] = time.time()
-        self._account_stats[account_index]["last_model"] = model
-        self._account_stats[account_index]["busy"] = True
-        self._last_reserved_index = account_index
         logger.info(
-            "account pool reserved account_index=%s/%s model=%s use_count=%s",
-            account_index,
-            len(self._accounts),
-            model,
-            self._account_stats[account_index]["use_count"],
+            "account session acquired index=%s session_model=%s instance_id=%s remaining_ms=%s",
+            account_index + 1,
+            session_lease.session.model,
+            session_lease.session.instance_id,
+            session_lease.session.remaining_ms,
         )
-        await self._write_stats()
         return CodebuffAccountLease(
             client=account.client,
             session=session_lease.session,
@@ -924,33 +803,7 @@ class CodebuffAccountPool:
     async def release(self, account_index: int) -> None:
         async with self._condition:
             self._accounts[account_index].busy = False
-            self._account_stats[account_index]["busy"] = False
             self._condition.notify(1)
-        logger.info("account pool released account_index=%s", account_index)
-        await self._write_stats()
-
-    def mark_rate_limited(
-        self,
-        account_index: int,
-        model: str,
-        reset_at: str | None,
-    ) -> None:
-        if not reset_at:
-            blocked_until = time.time() + 3600
-        else:
-            try:
-                dt = datetime.fromisoformat(reset_at.replace("Z", "+00:00"))
-                blocked_until = dt.timestamp()
-            except Exception:
-                blocked_until = time.time() + 3600
-        self._accounts[account_index].rate_limit.blocked_models[model] = blocked_until
-        self._accounts[account_index].rate_limit.last_error_at = time.time()
-        logger.warning(
-            "account %s rate limited for model=%s until %s",
-            account_index,
-            model,
-            reset_at,
-        )
 
     async def _reserve_account(self, model: str) -> int:
         async with self._condition:
@@ -964,16 +817,21 @@ class CodebuffAccountPool:
 
     def _next_available_index(self, model: str) -> int | None:
         account_count = len(self._accounts)
-        now = time.time()
+        
+        # Pass 1: Try to find a non-busy account that already has a fresh session for this model
         for offset in range(account_count):
             account_index = (self._next_index + offset) % account_count
             account = self._accounts[account_index]
-            if account.busy:
-                continue
-            blocked_until = account.rate_limit.blocked_models.get(model)
-            if blocked_until and now < blocked_until:
-                continue
-            return account_index
+            if not account.busy:
+                cached = account.sessions._sessions.get(model)
+                if cached and cached.is_fresh:
+                    return account_index
+                    
+        # Pass 2: Fall back to the first available non-busy account
+        for offset in range(account_count):
+            account_index = (self._next_index + offset) % account_count
+            if not self._accounts[account_index].busy:
+                return account_index
         return None
 
 
@@ -982,6 +840,11 @@ def utc_now_iso() -> str:
         "+00:00",
         "Z",
     )
+
+
+def _http2_available() -> bool:
+    # HTTP/2 is disabled to prevent RemoteProtocolError (Server disconnected) when routing through proxies.
+    return False
 
 
 def _host_header(url: str) -> str:
@@ -1034,85 +897,10 @@ def _upstream_error(
             upstream_message = data.get("message") or text
             return CodebuffError(
                 "Codebuff 409 session_model_mismatch: "
-                f"{upstream_message} 当前 IP/区域受限；请换用 US 服务器或 US 出口 IP 后重试。",
+                f"{upstream_message} The upstream determined that the current account or server egress only allows DeepSeek V4 Flash;"
+                "even if the public IP shows US location, Pro may still be unavailable due to egress IP range, account status, or upstream free-tier policy.",
                 409,
-                is_session_error=True,
             )
-        if data.get("error") == "session_superseded":
-            return CodebuffError(
-                f"Codebuff 409 session_superseded: {data.get('message') or text}",
-                409,
-                is_session_error=True,
-            )
-
-    # BUG A FIX: Codebuff returns 428 when the token has no active session and
-    # the client must first walk the waiting_room flow (request_ad_chain +
-    # get_streak). Without this branch the request is collapsed to a generic
-    # 502 wrapper and Hermes reports "Provider authentication failed" — even
-    # though the proxy + credentials are fine. Marking it as a session error
-    # makes chat_completions invalidate the local cache and retry, which on
-    # the next attempt follows the standard _request_ads_and_streak path
-    # before re-creating the session.
-    if response.status_code == 428:
-        try:
-            data = (
-                response.json()
-                if body is None
-                else httpx.Response(
-                    response.status_code,
-                    content=body,
-                    headers=response.headers,
-                ).json()
-            )
-        except ValueError:
-            data = {}
-        if data.get("error") == "waiting_room_required":
-            return CodebuffError(
-                f"Codebuff 428 waiting_room_required: {data.get('message') or text}",
-                428,
-                is_session_error=True,
-            )
-
-    if response.status_code == 410:
-        try:
-            data = (
-                response.json()
-                if body is None
-                else httpx.Response(
-                    response.status_code,
-                    content=body,
-                    headers=response.headers,
-                ).json()
-            )
-        except ValueError:
-            data = {}
-        if data.get("error") == "session_expired":
-            return CodebuffError(
-                f"Codebuff 410 session_expired: {data.get('message') or text}",
-                410,
-                is_session_error=True,
-            )
-
-    if response.status_code == 429:
-        try:
-            data = (
-                response.json()
-                if body is None
-                else httpx.Response(
-                    response.status_code,
-                    content=body,
-                    headers=response.headers,
-                ).json()
-            )
-        except ValueError:
-            data = {}
-        return CodebuffError(
-            f"{prefix}: {response.status_code} {text}",
-            502,
-            is_rate_limit=True,
-            reset_at=data.get("resetAt"),
-            retry_after_ms=data.get("retryAfterMs"),
-        )
 
     return CodebuffError(
         f"{prefix}: {response.status_code} {text}",

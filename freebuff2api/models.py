@@ -29,6 +29,7 @@ FREEBUFF_MODELS: tuple[FreebuffModel, ...] = (
     FreebuffModel("minimax/minimax-m3", "base2-free-minimax-m3"),
     FreebuffModel("mimo/mimo-v2.5", "base2-free-mimo"),
     FreebuffModel("mimo/mimo-v2.5-pro", "base2-free-mimo-pro"),
+    FreebuffModel("z-ai/glm-5.2", "base2-free-glm"),
 )
 
 DEFAULT_MODEL = FREEBUFF_MODELS[0]
@@ -87,6 +88,18 @@ def models_response() -> dict[str, object]:
             for model in ALL_MODELS
         ],
     }
+
+
+def model_response(model_id: str) -> dict[str, object] | None:
+    for model in ALL_MODELS:
+        if model.id == model_id:
+            return {
+                "id": model.id,
+                "object": "model",
+                "created": 0,
+                "owned_by": model.owned_by,
+            }
+    return None
 
 
 def agent_validation_payload() -> dict[str, object]:
